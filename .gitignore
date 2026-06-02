@@ -1,3 +1,5 @@
+web/node_modules/
+
 # Изображения (хранить локально, не в git)
 *.jpg
 *.jpeg
