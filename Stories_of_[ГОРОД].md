@@ -1,14 +1,14 @@
 # 📖 Хроника домена — События
 
 > Vampire: The Masquerade V20 | [ГОРОД], [ГОД]
-> 🔗 Протокол внесения записей — [rules/chronicle_paris.md](rules/chronicle_paris.md)
+> 🔗 Протокол внесения записей — [rules/chronicle.md](rules/chronicle.md)
 > 🔗 Все персонажи — [characters/characters_ALL.md](characters/characters_ALL.md)
 
 ---
 
 ## Хронология
 
-> Записи добавляются по протоколу из `rules/chronicle_paris.md` после каждой сессии.
+> Записи добавляются по протоколу из `rules/chronicle.md` после каждой сессии.
 
 ---
 

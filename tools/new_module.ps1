@@ -12,6 +12,9 @@ $ModuleDir = Join-Path $Root "modules\$Name"
 $ShortName = $Name -replace '^\w+_\d{4}_', ''
 $utf8bom   = [System.Text.UTF8Encoding]::new($true)
 
+$_sf = Get-ChildItem $Root -Filter "Stories_of_*.md" -File | Select-Object -First 1
+$storiesFile = if ($_sf) { $_sf.Name } else { "Stories_of_[ГОРОД].md" }
+
 if ($Name -match '^(\w+)_(\d{4})_') {
     $Month = $Matches[1]
     $Year  = $Matches[2]
@@ -102,7 +105,7 @@ $mainContent = @"
 # $Date — $ShortName
 > Хроника | Vampire: The Masquerade V20 / Changeling: The Dreaming
 
-> 🔗 [Хроника: $Date](../../Stories_of_Paris.md)
+> 🔗 [Хроника: $Date](../../$storiesFile)
 
 ---
 
@@ -134,7 +137,7 @@ $locBlock = if ($locNames.Count -gt 0) {
 
 $scenContent = @"
 # Сценарий — $ShortName
-> 🔗 [Модуль]($ShortName.md) | [Хроника](../../Stories_of_Paris.md)
+> 🔗 [Модуль]($ShortName.md) | [Хроника](../../$storiesFile)
 $linkedFinaleNote
 ---
 
@@ -224,7 +227,7 @@ $canonBlock = if ($npcNames.Count -gt 0) {
 $npcContent = @"
 # НПС модуля — «$ShortName»
 
-> 🔗 [Модуль]($ShortName.md) | [Хроника](../../Stories_of_Paris.md)
+> 🔗 [Модуль]($ShortName.md) | [Хроника](../../$storiesFile)
 > ℹ️ Каноничные НПС → ссылка на карточку в ``characters/``. Модульные (неканоничные) → карточки в ``нпс/``.
 
 ---
@@ -282,7 +285,7 @@ if ($locNames.Count -gt 0) {
 } else {
     Write-Host "    3. Заполнить список локаций в сценарий.md"
 }
-Write-Host "    4. Добавить запись в Stories_of_Paris.md"
+Write-Host "    4. Добавить запись в $storiesFile"
 Write-Host "    5. Создать финал.md когда сессия разыграна"
 Write-Host "    6. Запустить tools\validate_links.ps1"
 Write-Host ""

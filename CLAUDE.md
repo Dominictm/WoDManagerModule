@@ -168,7 +168,7 @@
 
 Сводный справочник всех персонажей — `characters/characters_ALL.md` (краткая информация + ссылки на арт + поле Лист).
 
-Протокол добавления новых НПС — `rules/npcs_city.md`. Таблица привязки визуальных референсов — `rules/npc_image_mapping.md`. Правила промтов для изображений — `rules/portret.md`. Протокол ведения хроники — `rules/chronicle_paris.md`. Правила дневников — `rules/diary_rules.md`. Правила модулей — `rules/module_rules.md`. Открытые сюжетные нити — `rules/open_threads.md`. Правила V20-листов персонажей — `rules/character_sheet_v20.md`. Карта фракций домена — `factions.md`. Слухи Элизиума (d20) — `rumors_elysium.md`. Слухи Грёзы (d20, если есть феи) — `rumors_dreaming.md`. Хронология WoD домена — `rules/timeline.md`.
+Протокол добавления новых НПС — `rules/npcs_city.md`. Таблица привязки визуальных референсов — `rules/npc_image_mapping.md`. Правила промтов для изображений — `rules/portret.md`. Протокол ведения хроники — `rules/chronicle.md`. Правила дневников — `rules/diary_rules.md`. Правила модулей — `rules/module_rules.md`. Открытые сюжетные нити — `rules/open_threads.md`. Правила V20-листов персонажей — `rules/character_sheet_v20.md`. Карта фракций домена — `factions.md`. Слухи Элизиума (d20) — `rumors_elysium.md`. Слухи Грёзы (d20, если есть феи) — `rumors_dreaming.md`. Хронология WoD домена — `rules/timeline.md`.
 
 **Карточки локаций** хранятся в `locations/`, рассортированные по районам (`[Район]/`). Локации вне города — `locations/Другие/[модуль]/`. Правила создания — `rules/portret.md`.
 

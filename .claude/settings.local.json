@@ -72,7 +72,11 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git checkout *)",
-      "Bash(git mv *)"
+      "Bash(git mv *)",
+      "Bash(git remote *)",
+      "PowerShell(cd \"F:\\\\VTM\\\\VTM-project-Claude\"; powershell.exe -ExecutionPolicy Bypass -File \"tools\\\\_replace_temp.ps1\")",
+      "Bash(git rm *)",
+      "Bash(Remove-Item \"tools\\\\_replace_temp.ps1\" -Force)"
     ],
     "additionalDirectories": [
       "f:\\VTM\\VTM-Проект-Claude\\.claude\\skills\\literary-writer",

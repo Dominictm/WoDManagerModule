@@ -16,6 +16,9 @@ param(
 $Root    = Split-Path -Parent $PSScriptRoot
 $utf8bom = [System.Text.UTF8Encoding]::new($true)
 
+$_sf = Get-ChildItem $Root -Filter "Stories_of_*.md" -File | Select-Object -First 1
+$storiesFile = if ($_sf) { $_sf.Name } else { "Stories_of_[ГОРОД].md" }
+
 Write-Host ""
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host "  VTM Paris 2010 -- Дневник" -ForegroundColor Cyan
@@ -92,8 +95,8 @@ if (Test-Path $diaryFile) {
 # От дневника до карточки персонажа: ../[Name].md (выход из Journal_X/ в папку персонажа)
 $cardRelPath = "../$CharacterName.md"
 
-# От дневника до Stories_of_Paris.md: 4 уровня вверх (Journal_X -> Имя -> линейка -> characters -> root)
-$storiesPath = "../../../../Stories_of_Paris.md"
+# От дневника до Stories_of_[ГОРОД].md: 4 уровня вверх (Journal_X -> Имя -> линейка -> characters -> root)
+$storiesPath = "../../../../$storiesFile"
 
 $moduleLink = if ($ModuleRef) {
     "`n> 🔗 [Модуль: $ModuleRef](../../../../modules/$ModuleRef/$($ModuleRef -split '_' | Select-Object -Skip 2 | Join-String -Separator '_').md)"

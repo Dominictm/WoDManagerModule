@@ -92,9 +92,10 @@ $changed = 0
 
 $targets = @(
     "CLAUDE.md", "README.md", "SETUP.md",
-    "factions.md", "factions_paris.md",
+    "factions.md",
     "rumors_elysium.md", "rumors_dreaming.md",
-    "characters\characters_ALL.md"
+    "characters\characters_ALL.md",
+    "rules\chronicle.md", "rules\timeline.md"
 )
 
 foreach ($rel in $targets) {
@@ -107,18 +108,18 @@ foreach ($rel in $targets) {
     }
 }
 
-# ─── Переименование factions_paris.md → factions.md ─────────────────────────
+# ─── Переименование factions.md → factions.md ─────────────────────────
 
-$oldFactions = Join-Path $Root "factions_paris.md"
+$oldFactions = Join-Path $Root "factions.md"
 $newFactions = Join-Path $Root "factions.md"
 if ((Test-Path $oldFactions) -and -not (Test-Path $newFactions)) {
     Rename-Item $oldFactions $newFactions -Force
-    Write-Host "  OK  factions_paris.md → factions.md" -ForegroundColor Green
+    Write-Host "  OK  factions.md → factions.md" -ForegroundColor Green
     $changed++
 
     # Обновить ссылки на старое имя во всех .md
     Get-ChildItem $Root -Recurse -Filter "*.md" | ForEach-Object {
-        Update-File $_.FullName "factions_paris.md" "factions.md" | Out-Null
+        Update-File $_.FullName "factions.md" "factions.md" | Out-Null
     }
 }
 

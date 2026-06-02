@@ -2,11 +2,11 @@
 # Создаёт папку и шаблон в locations/ с обязательными полями и промтом.
 #
 # Usage:
-#   # Парижская локация:
-#   .\tools\new_location.ps1 -Name "Склад в Ла-Курнёв" -District "Сен-Дени_93" -Zone dangerous -Angle wide-angle
+#   # Локация в домене:
+#   .\tools\new_location.ps1 -Name "Склад у порта" -District "Центр" -Zone dangerous -Angle wide-angle
 #
-#   # Локация вне Парижа:
-#   .\tools\new_location.ps1 -Name "Вилла в Лионе" -District Другие -Module "февраль_2011_лион" -Zone neutral -Angle street-level
+#   # Локация вне домена:
+#   .\tools\new_location.ps1 -Name "Вилла в горах" -District Другие -Module "январь_2011_горы" -Zone neutral -Angle street-level
 #
 # После создания Claude пишет: атмосферу, сенсорную палитру, крючки, уточняет промт.
 
@@ -25,6 +25,19 @@ param(
 $Root    = Split-Path -Parent $PSScriptRoot
 $utf8bom = [System.Text.UTF8Encoding]::new($true)
 
+# Динамическое имя файла хроники (Stories_of_[ГОРОД].md после new_city.ps1)
+$_sf = Get-ChildItem $Root -Filter "Stories_of_*.md" -File | Select-Object -First 1
+$storiesFile = if ($_sf) { $_sf.Name } else { "Stories_of_[ГОРОД].md" }
+
+# Название домена из CLAUDE.md (для промтов)
+$domainCity = "[ГОРОД]"
+$domainYear = "[ГОД]"
+$claudeRaw  = [System.IO.File]::ReadAllText((Join-Path $Root "CLAUDE.md"), [System.Text.Encoding]::UTF8)
+if ($claudeRaw -match '# Рассказчик: Vampire: The Masquerade — ([^,\n]+),\s*([^\n]+)') {
+    $domainCity = $Matches[1].Trim()
+    $domainYear = $Matches[2].Trim()
+}
+
 # ─── Путь ────────────────────────────────────────────────────────────────────
 
 $safeName = $Name -replace '[:\\/*?"<>|]', '_'
@@ -35,17 +48,17 @@ if ($District -eq "Другие") {
         exit 1
     }
     $locDir  = Join-Path $Root "locations\Другие\$Module\$safeName"
-    $backPath = "../../../../Stories_of_Paris.md"
+    $backPath = "../../../../$storiesFile"
 } else {
     $locDir  = Join-Path $Root "locations\$District\$safeName"
-    $backPath = "../../../Stories_of_Paris.md"
+    $backPath = "../../../$storiesFile"
 }
 
 $cardFile = Join-Path $locDir "$safeName.md"
 
 Write-Host ""
 Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host "  VTM Paris 2010 -- Новая локация" -ForegroundColor Cyan
+Write-Host "  VTM Chronicle Manager -- Новая локация" -ForegroundColor Cyan
 Write-Host "  $Name" -ForegroundColor White
 Write-Host "  District: $District  Zone: $Zone  Angle: $Angle" -ForegroundColor DarkGray
 Write-Host "=======================================" -ForegroundColor Cyan
@@ -67,7 +80,7 @@ $zoneLabel = switch ($Zone) {
 }
 
 $districtLabel = if ($District -eq "Другие") {
-    "Вне Парижа | $Module"
+    "Вне домена | $Module"
 } else {
     $District -replace '_', '-'
 }
@@ -88,7 +101,7 @@ $lightHint = switch ($Zone) {
     "dangerous" { "distant orange streetlights" }
 }
 
-$basePrompt = "$Name, Paris 2010, night, $surfaceHint reflecting $lightHint, atmospheric fog and mist, warm amber streetlamps contrast cold dark blue night sky, no people, cinematic $Angle composition, dark gothic World of Darkness atmosphere, photorealistic concept art, VtM Bloodhunt visual style, highly detailed, 1920x1080"
+$basePrompt = "$Name, $domainCity $domainYear, night, $surfaceHint reflecting $lightHint, atmospheric fog and mist, warm amber streetlamps contrast cold dark blue night sky, no people, cinematic $Angle composition, dark gothic World of Darkness atmosphere, photorealistic concept art, VtM Bloodhunt visual style, highly detailed, 1920x1080"
 
 # ─── Карточка ─────────────────────────────────────────────────────────────────
 
