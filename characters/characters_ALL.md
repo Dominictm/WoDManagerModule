@@ -23,8 +23,22 @@
 
 ---
 
-## 📂 Пустые линейки
+## 🐺 Оборотни
 
-- `characters/werewolves/` — Оборотни
-- `characters/mages/` — Маги
-- `characters/hunters/` — Охотники
+> Добавляются автоматически через `tools/new_npc.ps1 -Name "Имя" -Type werewolf`
+
+---
+
+## 🔮 Маги
+
+> Добавляются автоматически через `tools/new_npc.ps1 -Name "Имя" -Type mage`
+
+---
+
+## 🏹 Охотники
+
+> Добавляются автоматически через `tools/new_npc.ps1 -Name "Имя" -Type hunter`
+
+---
+
+## 📂 Прочие
