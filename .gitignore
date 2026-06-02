@@ -1,0 +1,13 @@
+# Изображения (хранить локально, не в git)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+
+# Claude Code локальные настройки
+.claude/settings.local.json
+
+# Windows
+Thumbs.db
+desktop.ini
