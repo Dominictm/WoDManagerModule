@@ -76,7 +76,16 @@
       "Bash(git remote *)",
       "PowerShell(cd \"F:\\\\VTM\\\\VTM-project-Claude\"; powershell.exe -ExecutionPolicy Bypass -File \"tools\\\\_replace_temp.ps1\")",
       "Bash(git rm *)",
-      "Bash(Remove-Item \"tools\\\\_replace_temp.ps1\" -Force)"
+      "Bash(Remove-Item \"tools\\\\_replace_temp.ps1\" -Force)",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue | ForEach-Object { Write-Host \"Останавливаю PID $\\($_.Id\\)...\"; $_.Kill\\(\\) }; Write-Host \"Готово.\")",
+      "PowerShell(Get-Process node -ErrorAction SilentlyContinue)",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Stop-Process -Id 31584 -Force)",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"F:\\\\VTM\\\\VTM-project-Claude\\\\web\\\\start.bat\"\\); \"Size: $\\($bytes.Length\\) bytes\"; \"First 4 bytes: $\\($bytes[0..3] | ForEach-Object { '0x{0:X2}' -f $_ }\\)\")",
+      "PowerShell(Stop-Process -Id \\(Get-Process node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id\\) -Force -ErrorAction SilentlyContinue)",
+      "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"F:\\\\VTM\\\\VTM-project-Claude\\\\web\\\\start.bat\"\\); \"BOM: $\\($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF\\)\"; \"Size: $\\($bytes.Length\\)\"; \"First line: $\\([System.Text.Encoding]::ASCII.GetString\\($bytes[0..13]\\)\\)\")",
+      "Bash(git -C \"F:/VTM/VTM-project-Claude\" status)",
+      "Bash(git -C \"F:/VTM/VTM-project-Claude\" branch -a)"
     ],
     "additionalDirectories": [
       "f:\\VTM\\VTM-Проект-Claude\\.claude\\skills\\literary-writer",

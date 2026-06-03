@@ -10,13 +10,14 @@
 # Запускать ОДИН РАЗ при старте нового проекта из шаблона.
 
 param(
-    [string]$City    = "",
-    [string]$Year    = "",
-    [string]$Country = ""
+    [string]$City      = "",
+    [string]$Year      = "",
+    [string]$Country   = "",
+    [string]$Districts = "",   # запятая-разделённые районы (обходит Read-Host)
+    [switch]$Force             # пропустить запросы подтверждения
 )
 
-$Root    = Split-Path -Parent $PSScriptRoot
-$utf8bom = [System.Text.UTF8Encoding]::new($true)
+$Root = Split-Path -Parent $PSScriptRoot
 
 function Update-File {
     param([string]$Path, [string]$From, [string]$To)
@@ -44,9 +45,11 @@ if ($claudeText -notmatch '\[ГОРОД\]') {
     Write-Host "  WARN: В CLAUDE.md не найдено [ГОРОД]." -ForegroundColor Yellow
     Write-Host "  Домен уже настроен, или файл был изменён вручную."
     Write-Host ""
-    $force = Read-Host "  Продолжить всё равно? [д/н]"
-    if ($force -notmatch '^[дД]') { exit 0 }
-    Write-Host ""
+    if (-not $Force) {
+        $cont = Read-Host "  Продолжить всё равно? [д/н]"
+        if ($cont -notmatch '^[дД]') { exit 0 }
+        Write-Host ""
+    }
 }
 
 # ─── Сбор данных ─────────────────────────────────────────────────────────────
@@ -68,7 +71,7 @@ if ($Year -notmatch '^\d{4}$') {
 }
 
 Write-Host ""
-$rawDistricts = (Read-Host "  Районы через запятую (Enter — пропустить)").Trim()
+$rawDistricts = if ($Districts) { $Districts } else { (Read-Host "  Районы через запятую (Enter — пропустить)").Trim() }
 $districts = @()
 if ($rawDistricts) {
     $districts = $rawDistricts -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
@@ -81,8 +84,10 @@ if ($districts.Count) {
     Write-Host "  Районы: $($districts -join ', ')" -ForegroundColor White
 }
 Write-Host ""
-$confirm = (Read-Host "  Применить? [д/н]").Trim()
-if ($confirm -notmatch '^[дД]') { Write-Host "  Отменено."; exit 0 }
+if (-not $Force) {
+    $confirm = (Read-Host "  Применить? [д/н]").Trim()
+    if ($confirm -notmatch '^[дД]') { Write-Host "  Отменено."; exit 0 }
+}
 Write-Host ""
 
 $safeCityName = $City -replace '[:\\/*?"<>| ]', '_'
@@ -181,5 +186,7 @@ Write-Host "  Следующий шаг:" -ForegroundColor Cyan
 Write-Host "    .\tools\new_npc.ps1 -Name `"Имя`" -Type vampire"
 Write-Host "    .\tools\new_module.ps1"
 Write-Host ""
-Write-Host "  Нажмите любую клавишу..." -ForegroundColor DarkGray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+if (-not $Force) {
+    Write-Host "  Нажмите любую клавишу..." -ForegroundColor DarkGray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}

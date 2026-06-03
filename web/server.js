@@ -9,6 +9,7 @@ const ROOT = path.join(__dirname, '..');
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/char-img', express.static(path.join(ROOT, 'characters')));
 
 // ── Markdown parser ───────────────────────────────────────────────────────────
 
@@ -48,6 +49,8 @@ function parseCharacter(rawContent, folderName, lineage) {
     if (k === 'Год обращения') c.embraceYear = v;
     if (k === 'Сир')          c.sire         = v;
     if (k === 'Год рождения') c.birthYear    = v;
+    if (k === 'Биография')    c.biography    = v;
+    if (k === 'Голос')        c.voice        = v;
   }
 
   // Relationships section (indented sub-bullets after **Отношения:**)
@@ -102,10 +105,20 @@ async function getAllCharacters() {
 
     for (const entry of entries) {
       if (entry === '.gitkeep') continue;
-      const mdPath = path.join(dir, entry, `${entry}.md`);
+      const charDir = path.join(dir, entry);
+      const mdPath  = path.join(charDir, `${entry}.md`);
       try {
         const content = await fs.readFile(mdPath, 'utf-8');
-        result.push(parseCharacter(content, entry, lineage));
+        const char = parseCharacter(content, entry, lineage);
+
+        // Find first image in character folder
+        const files = await fs.readdir(charDir).catch(() => []);
+        const imgFile = files.find(f => /\.(jpg|jpeg|png|webp|gif)$/i.test(f));
+        if (imgFile) {
+          char.imageUrl = `/char-img/${folder}/${encodeURIComponent(entry)}/${encodeURIComponent(imgFile)}`;
+        }
+
+        result.push(char);
       } catch { /* skip */ }
     }
   }
@@ -141,7 +154,7 @@ app.get('/api/status', async (req, res) => {
     let openThreads = 0;
     try {
       const ot = await fs.readFile(path.join(ROOT, 'rules', 'open_threads.md'), 'utf-8');
-      openThreads = (ot.match(/^## /gm) || []).length;
+      openThreads = (ot.match(/^\| \d+\s*\|/gm) || []).length;
     } catch {}
 
     let domain = 'Домен не настроен';
@@ -214,33 +227,34 @@ app.get('/api/graph', async (req, res) => {
 });
 
 // Run a PowerShell tool
-app.post('/api/run-tool', (req, res) => {
+app.post('/api/run-tool', async (req, res) => {
   const { tool, params = {} } = req.body;
   const allowed = ['new_city','new_npc','new_module','validate_links','status','search'];
   if (!allowed.includes(tool)) return res.status(400).json({ error: 'Unknown tool' });
 
   const script = path.join(ROOT, 'tools', `${tool}.ps1`);
 
-  // Build param string — single-quoted values so Cyrillic passes correctly
+  // -Force skips interactive prompts (Read-Host / ReadKey) — encoding-safe
+  const extraFlags = ['new_city', 'new_npc'].includes(tool) ? ' -Force' : '';
+
   const paramStr = Object.entries(params)
     .filter(([, v]) => v !== undefined && v !== null && String(v).trim() !== '')
     .map(([k, v]) => `-${k} '${String(v).replace(/'/g, "''")}'`)
     .join(' ');
 
-  // Force UTF-8 output BEFORE calling the script — fixes Russian garbling on CP866/CP1251 systems
+  // Force UTF-8 output — fixes Cyrillic garbling on CP866/CP1251 systems
   const cmd = [
     '[Console]::OutputEncoding = [System.Text.Encoding]::UTF8',
     '$OutputEncoding = [System.Text.Encoding]::UTF8',
-    `& '${script.replace(/\\/g, '\\\\').replace(/'/g, "''")}' ${paramStr}`
+    `& '${script.replace(/\\/g, '\\\\').replace(/'/g, "''")}' ${paramStr}${extraFlags}`
   ].join('; ');
 
   const args = ['-ExecutionPolicy', 'Bypass', '-NoProfile', '-Command', cmd];
 
-  // Stdin answers for interactive prompts
+  // Stdin only for tools that still use Read-Host
   const stdinMap = {
-    new_city:   `${params.Districts || ''}\nд\n`,
     new_npc:    `д\n`,
-    new_module: `\n\n\nд\n`,
+    new_module: `\n\n\n`,
   };
   const stdinData = stdinMap[tool] || '';
 
@@ -250,7 +264,7 @@ app.post('/api/run-tool', (req, res) => {
   });
 
   let out = '', err = '';
-  if (stdinData) { ps.stdin.write(stdinData); ps.stdin.end(); }
+  if (stdinData) { ps.stdin.write(Buffer.from(stdinData, 'utf8')); ps.stdin.end(); }
   ps.stdout.on('data', d => { out += d.toString('utf8'); });
   ps.stderr.on('data', d => { err += d.toString('utf8'); });
 
