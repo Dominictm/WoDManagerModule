@@ -30,7 +30,7 @@ if (Test-Path $ModuleDir) {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  VTM Paris 2010 -- Новый модуль" -ForegroundColor Cyan
+Write-Host "  VTM Chronicle Manager -- Новый модуль" -ForegroundColor Cyan
 Write-Host "  $Date -- $ShortName" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
@@ -208,9 +208,9 @@ $npcScenBlock
 
 ---
 
-## 📎 Парижский колорит
+## 📎 Городской колорит
 
-⚠️ 2–3 специфически парижские детали: район, смертные, язык, культурный контекст.
+⚠️ 2–3 детали, специфичные для вашего домена: район, смертные, язык, культурный контекст.
 "@
 [System.IO.File]::WriteAllText($scenFile, $scenContent, $utf8bom)
 

@@ -20,7 +20,7 @@ $mapFile    = Join-Path $Root "rules\npc_image_mapping.md"
 
 Write-Host ""
 Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host "  VTM Paris 2010 -- Продвижение НПС" -ForegroundColor Cyan
+Write-Host "  VTM Chronicle Manager -- Продвижение НПС" -ForegroundColor Cyan
 Write-Host "  $NpcName" -ForegroundColor White
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
@@ -115,7 +115,7 @@ $cardContent = @"
 - **Сир:** ⚠️ Заполнить
 - **Дитя:** —
 - **Домен / Локация:** ⚠️ Заполнить
-- **Парижская иерархия:** ⚠️ Заполнить
+- **Иерархия домена:** ⚠️ Заполнить
 - **Роль:** $role
 - **Статус:** $status
 

@@ -4,8 +4,8 @@
 #
 # Usage:
 #   .\tools\add_diary.ps1 -CharacterName "Эмилия" -Period "2011-02"
-#   .\tools\add_diary.ps1 -CharacterName "Верене де Кюстин" -Period retrospective
-#   .\tools\add_diary.ps1 -CharacterName "Джек" -Period "2010-11" -ModuleRef "ноябрь_2010_кошки_и_мышки"
+#   .\tools\add_diary.ps1 -CharacterName "[Имя Персонажа]" -Period retrospective
+#   .\tools\add_diary.ps1 -CharacterName "[Имя]" -Period "ГГГГ-ММ" -ModuleRef "название_модуля"
 
 param(
     [Parameter(Mandatory=$true)] [string]$CharacterName,
@@ -21,7 +21,7 @@ $storiesFile = if ($_sf) { $_sf.Name } else { "Stories_of_[ГОРОД].md" }
 
 Write-Host ""
 Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host "  VTM Paris 2010 -- Дневник" -ForegroundColor Cyan
+Write-Host "  VTM Chronicle Manager -- Дневник" -ForegroundColor Cyan
 Write-Host "  $CharacterName / $Period" -ForegroundColor White
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
@@ -177,3 +177,5 @@ Write-Host "  Справка по стилю: rules\diary_rules.md" -ForegroundC
 Write-Host ""
 Write-Host "  Нажмите любую клавишу..." -ForegroundColor DarkGray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+

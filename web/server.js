@@ -7,6 +7,9 @@ const app  = express();
 const PORT = 3000;
 const ROOT = path.join(__dirname, '..');
 
+let _cache = { chars: null, ts: 0 };
+const CHARS_TTL = 15_000;
+
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/char-img', express.static(path.join(ROOT, 'characters')));
@@ -97,6 +100,7 @@ const LINEAGE_MAP = {
 };
 
 async function getAllCharacters() {
+  if (_cache.chars && Date.now() - _cache.ts < CHARS_TTL) return _cache.chars;
   const result = [];
   for (const [folder, lineage] of Object.entries(LINEAGE_MAP)) {
     const dir = path.join(ROOT, 'characters', folder);
@@ -122,6 +126,7 @@ async function getAllCharacters() {
       } catch { /* skip */ }
     }
   }
+  _cache = { chars: result, ts: Date.now() };
   return result;
 }
 
@@ -272,6 +277,7 @@ app.post('/api/run-tool', async (req, res) => {
 
   ps.on('close', code => {
     clearTimeout(timer);
+    if (code === 0) _cache = { chars: null, ts: 0 };
     res.json({ success: code === 0, output: out || err, exitCode: code });
   });
   ps.on('error', e => {

@@ -85,7 +85,21 @@
       "PowerShell(Stop-Process -Id \\(Get-Process node -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Id\\) -Force -ErrorAction SilentlyContinue)",
       "PowerShell($bytes = [System.IO.File]::ReadAllBytes\\(\"F:\\\\VTM\\\\VTM-project-Claude\\\\web\\\\start.bat\"\\); \"BOM: $\\($bytes[0] -eq 0xEF -and $bytes[1] -eq 0xBB -and $bytes[2] -eq 0xBF\\)\"; \"Size: $\\($bytes.Length\\)\"; \"First line: $\\([System.Text.Encoding]::ASCII.GetString\\($bytes[0..13]\\)\\)\")",
       "Bash(git -C \"F:/VTM/VTM-project-Claude\" status)",
-      "Bash(git -C \"F:/VTM/VTM-project-Claude\" branch -a)"
+      "Bash(git -C \"F:/VTM/VTM-project-Claude\" branch -a)",
+      "Bash(node server.js)",
+      "Bash(Start-Sleep -Seconds 2)",
+      "Bash(Invoke-RestMethod http://localhost:3000/api/status)",
+      "Bash(ConvertTo-Json)",
+      "PowerShell(Invoke-RestMethod http://localhost:3000/api/status)",
+      "PowerShell(Invoke-RestMethod http://localhost:3000/api/characters)",
+      "PowerShell(Invoke-RestMethod http://localhost:3000/api/graph)",
+      "PowerShell(Get-ChildItem \"F:\\\\VTM\\\\VTM-project-Claude\\\\characters\" -Recurse | Where-Object { -not $_.PSIsContainer } | Select-Object FullName)",
+      "PowerShell($r = Invoke-WebRequest http://localhost:3000/styles.css -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; \"Content-Type: $\\($r.Headers['Content-Type']\\)\"; \"Size: $\\($r.Content.Length\\) chars\")",
+      "PowerShell($r = Invoke-WebRequest http://localhost:3000/scripts.js -UseBasicParsing; \"Status: $\\($r.StatusCode\\)\"; \"Content-Type: $\\($r.Headers['Content-Type']\\)\"; \"Size: $\\($r.Content.Length\\) chars\")",
+      "PowerShell(Stop-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "PowerShell(\"Server stopped\")",
+      "Bash(Get-ChildItem -File -Name)",
+      "Bash(Select-Object -First 20)"
     ],
     "additionalDirectories": [
       "f:\\VTM\\VTM-Проект-Claude\\.claude\\skills\\literary-writer",

@@ -57,7 +57,7 @@ if ($Clan)   { $chars = $chars | Where-Object { $_.Clan   -match $Clan   } }
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Cyan
-Write-Host "  VTM Paris 2010 -- Character Status" -ForegroundColor Cyan
+Write-Host "  VTM Chronicle Manager -- Character Status" -ForegroundColor Cyan
 Write-Host "==========================================" -ForegroundColor Cyan
 
 $groups = $chars | Group-Object Lineage
