@@ -6,6 +6,8 @@ web/node_modules/
 *.png
 *.gif
 *.webp
+# Исключение: тестовый плейсхолдер для автотестов
+!tests/test.png
 
 # Claude Code локальные настройки
 .claude/settings.local.json
