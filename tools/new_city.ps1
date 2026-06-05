@@ -13,11 +13,12 @@ param(
     [string]$City      = "",
     [string]$Year      = "",
     [string]$Country   = "",
-    [string]$Districts = "",   # запятая-разделённые районы (обходит Read-Host)
-    [switch]$Force             # пропустить запросы подтверждения
+    [string]$Districts = "",
+    [switch]$Force
 )
 
-$Root = Split-Path -Parent $PSScriptRoot
+$Root    = Split-Path -Parent $PSScriptRoot
+$utf8bom = [System.Text.UTF8Encoding]::new($true)
 
 function Update-File {
     param([string]$Path, [string]$From, [string]$To)
@@ -46,9 +47,11 @@ if ($claudeText -notmatch '\[ГОРОД\]') {
     Write-Host "  Домен уже настроен, или файл был изменён вручную."
     Write-Host ""
     if (-not $Force) {
-        $cont = Read-Host "  Продолжить всё равно? [д/н]"
-        if ($cont -notmatch '^[дД]') { exit 0 }
+        $ans = Read-Host "  Продолжить всё равно? [д/н]"
+        if ($ans -notmatch '^[дД]') { exit 0 }
         Write-Host ""
+    } else {
+        Write-Host "  -Force: продолжаем." -ForegroundColor DarkGray
     }
 }
 
@@ -71,7 +74,13 @@ if ($Year -notmatch '^\d{4}$') {
 }
 
 Write-Host ""
-$rawDistricts = if ($Districts) { $Districts } else { (Read-Host "  Районы через запятую (Enter — пропустить)").Trim() }
+if ($Districts) {
+    $rawDistricts = $Districts
+} elseif (-not $Force) {
+    $rawDistricts = (Read-Host "  Районы через запятую (Enter — пропустить)").Trim()
+} else {
+    $rawDistricts = ""
+}
 $districts = @()
 if ($rawDistricts) {
     $districts = $rawDistricts -split ',' | ForEach-Object { $_.Trim() } | Where-Object { $_ }
@@ -87,8 +96,8 @@ Write-Host ""
 if (-not $Force) {
     $confirm = (Read-Host "  Применить? [д/н]").Trim()
     if ($confirm -notmatch '^[дД]') { Write-Host "  Отменено."; exit 0 }
+    Write-Host ""
 }
-Write-Host ""
 
 $safeCityName = $City -replace '[:\\/*?"<>| ]', '_'
 $changed = 0
@@ -97,10 +106,9 @@ $changed = 0
 
 $targets = @(
     "CLAUDE.md", "README.md", "SETUP.md",
-    "factions.md",
+    "factions.md", "factions_paris.md",
     "rumors_elysium.md", "rumors_dreaming.md",
-    "characters\characters_ALL.md",
-    "rules\chronicle.md", "rules\timeline.md"
+    "characters\characters_ALL.md"
 )
 
 foreach ($rel in $targets) {
@@ -113,18 +121,18 @@ foreach ($rel in $targets) {
     }
 }
 
-# ─── Переименование factions.md → factions.md ─────────────────────────
+# ─── Переименование factions_paris.md → factions.md ─────────────────────────
 
-$oldFactions = Join-Path $Root "factions.md"
+$oldFactions = Join-Path $Root "factions_paris.md"
 $newFactions = Join-Path $Root "factions.md"
 if ((Test-Path $oldFactions) -and -not (Test-Path $newFactions)) {
     Rename-Item $oldFactions $newFactions -Force
-    Write-Host "  OK  factions.md → factions.md" -ForegroundColor Green
+    Write-Host "  OK  factions_paris.md → factions.md" -ForegroundColor Green
     $changed++
 
     # Обновить ссылки на старое имя во всех .md
     Get-ChildItem $Root -Recurse -Filter "*.md" | ForEach-Object {
-        Update-File $_.FullName "factions.md" "factions.md" | Out-Null
+        Update-File $_.FullName "factions_paris.md" "factions.md" | Out-Null
     }
 }
 

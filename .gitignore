@@ -1,17 +1,9 @@
 web/node_modules/
-
-# Изображения (хранить локально, не в git)
 *.jpg
 *.jpeg
 *.png
 *.gif
 *.webp
-# Исключение: тестовый плейсхолдер для автотестов
-!tests/test.png
-
-# Claude Code локальные настройки
 .claude/settings.local.json
-
-# Windows
 Thumbs.db
 desktop.ini

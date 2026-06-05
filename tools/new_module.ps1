@@ -4,16 +4,14 @@
 
 param(
     [Parameter(Mandatory=$true)]
-    [string]$Name
+    [string]$Name,
+    [switch]$Force
 )
 
 $Root      = Split-Path -Parent $PSScriptRoot
 $ModuleDir = Join-Path $Root "modules\$Name"
 $ShortName = $Name -replace '^\w+_\d{4}_', ''
 $utf8bom   = [System.Text.UTF8Encoding]::new($true)
-
-$_sf = Get-ChildItem $Root -Filter "Stories_of_*.md" -File | Select-Object -First 1
-$storiesFile = if ($_sf) { $_sf.Name } else { "Stories_of_[ГОРОД].md" }
 
 if ($Name -match '^(\w+)_(\d{4})_') {
     $Month = $Matches[1]
@@ -30,7 +28,7 @@ if (Test-Path $ModuleDir) {
 
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "  VTM Chronicle Manager -- Новый модуль" -ForegroundColor Cyan
+Write-Host "  VTM Paris 2010 -- Новый модуль" -ForegroundColor Cyan
 Write-Host "  $Date -- $ShortName" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
@@ -40,7 +38,11 @@ Write-Host ""
 $linkedDisplayName = ""
 $linkedFinaleNote  = ""
 
-$linkAnswer = Read-Host "Связан ли этот модуль с другими хрониками/модулями? [д/н]"
+if (-not $Force) {
+    $linkAnswer = Read-Host "Связан ли этот модуль с другими хрониками/модулями? [д/н]"
+} else {
+    $linkAnswer = "н"
+}
 if ($linkAnswer -match '^[дД]') {
     $modulesRoot = Join-Path $Root "modules"
     $finaleFiles = Get-ChildItem -Path $modulesRoot -Recurse -Filter "финал.md" -ErrorAction SilentlyContinue
@@ -76,7 +78,11 @@ if ($linkAnswer -match '^[дД]') {
 # ─── Шаг 2: НПС ──────────────────────────────────────────────────────────────
 
 Write-Host ""
-$npcInput = Read-Host "Перечислите НПС модуля через запятую (Enter — пропустить)"
+if (-not $Force) {
+    $npcInput = Read-Host "Перечислите НПС модуля через запятую (Enter — пропустить)"
+} else {
+    $npcInput = ""
+}
 $npcNames = @()
 if ($npcInput.Trim() -ne "") {
     $npcNames = ($npcInput -split ",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
@@ -84,7 +90,11 @@ if ($npcInput.Trim() -ne "") {
 
 # ─── Шаг 3: Локации ──────────────────────────────────────────────────────────
 
-$locInput = Read-Host "Перечислите локации через запятую (Enter — пропустить)"
+if (-not $Force) {
+    $locInput = Read-Host "Перечислите локации через запятую (Enter — пропустить)"
+} else {
+    $locInput = ""
+}
 $locNames = @()
 if ($locInput.Trim() -ne "") {
     $locNames = ($locInput -split ",") | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne "" }
@@ -105,7 +115,7 @@ $mainContent = @"
 # $Date — $ShortName
 > Хроника | Vampire: The Masquerade V20 / Changeling: The Dreaming
 
-> 🔗 [Хроника: $Date](../../$storiesFile)
+> 🔗 [Хроника: $Date](../../Stories_of_Paris.md)
 
 ---
 
@@ -137,7 +147,7 @@ $locBlock = if ($locNames.Count -gt 0) {
 
 $scenContent = @"
 # Сценарий — $ShortName
-> 🔗 [Модуль]($ShortName.md) | [Хроника](../../$storiesFile)
+> 🔗 [Модуль]($ShortName.md) | [Хроника](../../Stories_of_Paris.md)
 $linkedFinaleNote
 ---
 
@@ -208,9 +218,9 @@ $npcScenBlock
 
 ---
 
-## 📎 Городской колорит
+## 📎 Парижский колорит
 
-⚠️ 2–3 детали, специфичные для вашего домена: район, смертные, язык, культурный контекст.
+⚠️ 2–3 специфически парижские детали: район, смертные, язык, культурный контекст.
 "@
 [System.IO.File]::WriteAllText($scenFile, $scenContent, $utf8bom)
 
@@ -227,7 +237,7 @@ $canonBlock = if ($npcNames.Count -gt 0) {
 $npcContent = @"
 # НПС модуля — «$ShortName»
 
-> 🔗 [Модуль]($ShortName.md) | [Хроника](../../$storiesFile)
+> 🔗 [Модуль]($ShortName.md) | [Хроника](../../Stories_of_Paris.md)
 > ℹ️ Каноничные НПС → ссылка на карточку в ``characters/``. Модульные (неканоничные) → карточки в ``нпс/``.
 
 ---
@@ -285,9 +295,11 @@ if ($locNames.Count -gt 0) {
 } else {
     Write-Host "    3. Заполнить список локаций в сценарий.md"
 }
-Write-Host "    4. Добавить запись в $storiesFile"
+Write-Host "    4. Добавить запись в Stories_of_Paris.md"
 Write-Host "    5. Создать финал.md когда сессия разыграна"
 Write-Host "    6. Запустить tools\validate_links.ps1"
 Write-Host ""
-Write-Host "  Нажмите любую клавишу для закрытия..." -ForegroundColor DarkGray
-$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+if (-not $Force) {
+    Write-Host "  Нажмите любую клавишу для закрытия..." -ForegroundColor DarkGray
+    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+}

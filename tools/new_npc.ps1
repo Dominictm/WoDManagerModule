@@ -30,7 +30,7 @@ $utf8bom     = [System.Text.UTF8Encoding]::new($true)
 $typeInfo = @{
     "vampire"  = @{ Folder = "vampires";   SectionEnd = "`n---`n`n## 🧚 Феи";      DefaultEmoji = "🧛"; Tmpl = "vampire" }
     "fairy"    = @{ Folder = "fairies";    SectionEnd = "`n---`n`n## 🧑 Смертные"; DefaultEmoji = "🧚"; Tmpl = "fairy"   }
-    "mortal"   = @{ Folder = "mortals";    SectionEnd = "`n---`n`n## 🐺 Оборотни"; DefaultEmoji = "👤"; Tmpl = "mortal"  }
+    "mortal"   = @{ Folder = "mortals";    SectionEnd = "`n---`n`n## 📂 Пустые";   DefaultEmoji = "👤"; Tmpl = "mortal"  }
     "werewolf" = @{ Folder = "werewolves"; SectionEnd = "`n---`n`n## 🔮 Маги";      DefaultEmoji = "🐺"; Tmpl = "vampire" }
     "mage"     = @{ Folder = "mages";      SectionEnd = "`n---`n`n## 🏹 Охотники"; DefaultEmoji = "🔮"; Tmpl = "vampire" }
     "hunter"   = @{ Folder = "hunters";    SectionEnd = "`n---`n`n## 📂 Прочие";   DefaultEmoji = "🏹"; Tmpl = "vampire" }
@@ -47,7 +47,7 @@ $mapFile    = Join-Path $Root "rules\npc_image_mapping.md"
 
 Write-Host ""
 Write-Host "=======================================" -ForegroundColor Cyan
-Write-Host "  VTM Chronicle Manager -- Новый НПС" -ForegroundColor Cyan
+Write-Host "  VTM Paris 2010 -- Новый НПС" -ForegroundColor Cyan
 Write-Host "  $Emoji $Name  [$Type]" -ForegroundColor White
 Write-Host "=======================================" -ForegroundColor Cyan
 Write-Host ""
@@ -119,7 +119,7 @@ $cardContent = @"
 - **Год рождения / Первое пробуждение:** ⚠️ Заполнить
 - **Фригольд / Локация:** ⚠️ Заполнить
 - **Роль:** $Role
-- **Статус:** Активен
+- **Статус:** ⚠️ Жив / Жива — уточнить
 - **Биография:** ⚠️ Заполнить
 - **Внешность:** ⚠️ Заполнить
 - **Особенности / Способности:** ⚠️ Заполнить
@@ -157,9 +157,9 @@ $cardContent = @"
 - **Сир:** ⚠️ Заполнить
 - **Дитя:** —
 - **Домен / Локация:** ⚠️ Заполнить
-- **Иерархия домена:** ⚠️ Заполнить
+- **Парижская иерархия:** ⚠️ Заполнить
 - **Роль:** $Role
-- **Статус:** Активен
+- **Статус:** ⚠️ Жив / Жива — уточнить
 
 - **Биография:** ⚠️ Заполнить
 

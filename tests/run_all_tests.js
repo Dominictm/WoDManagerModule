@@ -1,15 +1,14 @@
 /**
- * VTM Chronicle Manager — Полный набор тестов (шаблон)
+ * VTM Chronicle Manager — Полный набор тестов
  *
  * Запуск:  node tests/run_all_tests.js
  *          или через  tests/run_all.bat
  *
- * Секция 1 — API-тесты  (9 групп, без браузера)
- * Секция 2 — UI-тесты   (9 групп, Headless Chrome)
+ * Последовательность:
+ *   Секция 1 — API-тесты  (7 групп, без браузера)
+ *   Секция 2 — UI-тесты   (8 групп, Headless Chrome)
  *
  * Отчёт: tests/report_all.html
- *
- * Тесты не содержат приватных данных проекта — работают с любым доменом.
  */
 
 'use strict';
@@ -282,16 +281,19 @@ function runPS(relScript, psArgs) {
 // ── Создание персонажа через UI ───────────────────────────────────────────────
 
 async function createCharViaUI(driver, lineage, fields, imagePath) {
+  // Переход + открытие модала
   await navTo(driver, 'characters');
   const createBtn = await driver.findElement(By.id('btn-open-create-char'));
   await driver.executeScript('arguments[0].click()', createBtn);
   await waitModalVisible(driver, 'char-modal');
 
+  // Выбор линейки
   await driver.findElement(By.css('[data-type="' + lineage + '"]')).click();
   await driver.wait(async () => {
     try { return await (await driver.findElement(By.id('modal-s2'))).isDisplayed(); } catch { return false; }
   }, WAIT, 'Step 2 did not appear for ' + lineage);
 
+  // Заполнение полей
   for (const [param, value] of Object.entries(fields)) {
     try {
       const input = await driver.findElement(By.css('input[data-param="' + param + '"]'));
@@ -300,6 +302,7 @@ async function createCharViaUI(driver, lineage, fields, imagePath) {
     } catch { /* поле может отсутствовать для данного типа */ }
   }
 
+  // Загрузка изображения
   if (imagePath && fs.existsSync(imagePath)) {
     const imgInput = await driver.findElement(By.id('modal-img-input'));
     await imgInput.sendKeys(imagePath);
@@ -309,8 +312,10 @@ async function createCharViaUI(driver, lineage, fields, imagePath) {
     }, 6000, 'Image preview did not appear');
   }
 
+  // Отправка формы
   await driver.findElement(By.id('modal-submit')).click();
 
+  // Ждём успеха (класс .ok на #modal-output)
   await driver.wait(async () => {
     try {
       const out = await driver.findElement(By.id('modal-output'));
@@ -319,6 +324,7 @@ async function createCharViaUI(driver, lineage, fields, imagePath) {
     } catch { return false; }
   }, 30000, 'Character creation did not succeed: ' + lineage);
 
+  // Ждём закрытия модала
   await waitModalHidden(driver, 'char-modal');
 }
 
@@ -331,9 +337,11 @@ function removeEntryFromAllMd(text, name) {
   while (i < lines.length) {
     var line = lines[i];
     if (line.startsWith('### ') && line.includes(name)) {
+      // Убираем до 6 следующих `- ` строк
       i++;
       var skipped = 0;
       while (i < lines.length && lines[i].startsWith('- ') && skipped < 6) { i++; skipped++; }
+      // Убираем предшествующие пустые строки
       while (result.length > 0 && result[result.length - 1] === '') result.pop();
     } else {
       result.push(line);
@@ -353,6 +361,8 @@ function cleanupTestChars() {
       removed++;
     }
   }
+
+  // characters_ALL.md
   var allPath = path.join(ROOT, 'characters', 'characters_ALL.md');
   try {
     var allText = fs.readFileSync(allPath, 'utf-8').replace(/\r\n/g, '\n');
@@ -363,6 +373,8 @@ function cleanupTestChars() {
   } catch(e) {
     process.stdout.write('  \x1b[33m⚠ cleanup characters_ALL.md: ' + e.message + '\x1b[0m\n');
   }
+
+  // npc_image_mapping.md
   var mapPath = path.join(ROOT, 'rules', 'npc_image_mapping.md');
   try {
     var mapText = fs.readFileSync(mapPath, 'utf-8').replace(/\r\n/g, '\n');
@@ -374,6 +386,7 @@ function cleanupTestChars() {
   } catch(e) {
     process.stdout.write('  \x1b[33m⚠ cleanup npc_image_mapping.md: ' + e.message + '\x1b[0m\n');
   }
+
   return removed;
 }
 
@@ -381,7 +394,8 @@ function cleanupTestChars() {
 
 function buildFailureSummary(groups, totalFail) {
   function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
   var rows = '';
   var num  = 0;
@@ -440,7 +454,9 @@ function buildReport(groups, totalPass, totalFail, totalRun, elapsed) {
   var ui  = secStats(uiGroups);
 
   function esc(s) {
-    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
   }
 
   function renderRows(tests) {
@@ -448,7 +464,9 @@ function buildReport(groups, totalPass, totalFail, totalRun, elapsed) {
     return tests.map(function(tt) {
       var cls  = tt.status === 'PASS' ? 'pass' : (tt.status === 'SKIP' ? 'skip' : 'fail');
       var icon = tt.status === 'PASS' ? '&#10003;' : (tt.status === 'SKIP' ? '&ndash;' : '&#10007;');
-      var err  = tt.error ? '<div class="err-msg">' + esc(tt.error) + '</div>' : '';
+      var err  = tt.error
+        ? '<div class="err-msg">' + esc(tt.error) + '</div>'
+        : '';
       return '<tr class="row-' + cls + '">'
         + '<td class="col-status"><span class="badge-' + cls + '">' + icon + '</span></td>'
         + '<td class="col-name">' + esc(tt.name) + err + '</td>'
@@ -491,15 +509,19 @@ function buildReport(groups, totalPass, totalFail, totalRun, elapsed) {
     var sPct = stat.total ? Math.round(stat.pass / stat.total * 100) : 0;
     var sOk  = stat.fail === 0;
     return '<div class="sec-header sec-' + tag + '">'
-      +   '<div class="sec-left"><span class="sec-badge">' + badge + '</span>'
-      +     '<div class="sec-title">' + title + '</div></div>'
+      +   '<div class="sec-left">'
+      +     '<span class="sec-badge">' + badge + '</span>'
+      +     '<div class="sec-title">' + title + '</div>'
+      +   '</div>'
       +   '<div class="sec-right">'
       +     '<span class="sec-stat ' + (sOk ? 'sec-ok' : 'sec-fail') + '">'
-      +       (sOk ? '&#10003;' : '&#10007;') + ' ' + stat.pass + '/' + stat.total + '</span>'
+      +       (sOk ? '&#10003;' : '&#10007;') + ' ' + stat.pass + '/' + stat.total
+      +     '</span>'
       +     '<div class="sec-bar-wrap"><div class="sec-bar-fill ' + (sOk ? '' : 'fail') + '" style="width:' + sPct + '%"></div></div>'
       +     '<span class="sec-pct">' + sPct + '%</span>'
       +   '</div>'
-      + '</div>' + renderGroups(gs);
+      + '</div>'
+      + renderGroups(gs);
   }
 
   var css = ':root{'
@@ -512,15 +534,21 @@ function buildReport(groups, totalPass, totalFail, totalRun, elapsed) {
     + '--fh:"Cinzel",serif;--fb:"Cormorant Garamond",Georgia,serif;--fm:"Share Tech Mono","Courier New",monospace;'
     + '}'
     + '*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}'
+    + 'html{scroll-behavior:smooth}'
     + 'body{background:var(--bg);color:var(--text);font-family:var(--fb);font-size:16px;line-height:1.6}'
-    + '::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--red)}'
+    + '::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--red);border-radius:3px}'
+
+    // Header
     + '.header{background:var(--bg2);border-bottom:2px solid var(--border2);padding:40px 48px 32px;position:relative;overflow:hidden}'
-    + '.header::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(139,0,0,.18),transparent 70%);pointer-events:none}'
+    + '.header::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(139,0,0,.18) 0%,transparent 70%);pointer-events:none}'
     + '.header-top{display:flex;align-items:flex-start;justify-content:space-between;gap:32px;margin-bottom:32px}'
+    + '.logo{display:flex;flex-direction:column;gap:4px}'
     + '.logo-drop{font-size:11px;color:var(--text3);font-family:var(--fm);letter-spacing:.1em;text-transform:uppercase}'
-    + '.logo-title{font-family:var(--fh);font-size:28px;font-weight:700;letter-spacing:.18em;text-transform:uppercase}'
+    + '.logo-title{font-family:var(--fh);font-size:28px;font-weight:700;color:var(--text);letter-spacing:.18em;text-transform:uppercase}'
     + '.logo-sub{font-family:var(--fh);font-size:12px;color:var(--text3);letter-spacing:.22em;text-transform:uppercase;margin-top:2px}'
     + '.stamp{font-family:var(--fm);font-size:12px;color:var(--text3);text-align:right;line-height:1.8}'
+
+    // Status banner
     + '.status-banner{display:flex;align-items:center;gap:20px;padding:20px 28px;border-radius:6px;border:1px solid}'
     + '.status-banner.all-pass{background:rgba(26,92,26,.15);border-color:rgba(76,175,80,.35)}'
     + '.status-banner.has-fail{background:rgba(139,0,0,.15);border-color:rgba(180,20,0,.45)}'
@@ -528,44 +556,56 @@ function buildReport(groups, totalPass, totalFail, totalRun, elapsed) {
     + '.status-headline{font-family:var(--fh);font-size:18px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}'
     + '.all-pass .status-headline{color:var(--green3)}.has-fail .status-headline{color:#ff6b6b}'
     + '.status-sub{font-family:var(--fm);font-size:12px;color:var(--text2)}'
+
+    // Stats row
     + '.stats-row{display:flex;gap:16px;margin-top:28px}'
     + '.stat{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:20px 16px;text-align:center;position:relative;overflow:hidden}'
     + '.stat::after{content:"";position:absolute;top:0;left:0;right:0;height:2px}'
     + '.stat-pass::after{background:linear-gradient(90deg,var(--green3),transparent)}'
     + '.stat-fail::after{background:linear-gradient(90deg,var(--red2),transparent)}'
+    + '.stat-skip::after{background:linear-gradient(90deg,var(--gold),transparent)}'
     + '.stat-total::after{background:linear-gradient(90deg,var(--text3),transparent)}'
     + '.stat-time::after{background:linear-gradient(90deg,var(--gold2),transparent)}'
     + '.stat-num{font-family:var(--fh);font-size:48px;font-weight:700;line-height:1}'
     + '.stat-pass .stat-num{color:var(--green3)}.stat-fail .stat-num{color:#ff6b6b}'
-    + '.stat-total .stat-num{color:var(--text2)}.stat-time .stat-num{color:var(--gold2);font-size:32px}'
+    + '.stat-skip .stat-num{color:var(--gold)}.stat-total .stat-num{color:var(--text2)}'
+    + '.stat-time .stat-num{color:var(--gold2);font-size:32px}'
     + '.stat-lbl{font-family:var(--fh);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);margin-top:6px}'
+
+    // Progress bar
     + '.progress-wrap{margin-top:28px}'
     + '.progress-label{display:flex;justify-content:space-between;font-family:var(--fm);font-size:11px;color:var(--text3);margin-bottom:6px}'
     + '.progress-track{height:8px;background:var(--bg4);border-radius:4px;overflow:hidden;border:1px solid var(--border)}'
     + '.progress-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--green2),var(--green3))}'
     + '.progress-fill.fail{background:linear-gradient(90deg,var(--red),var(--red3))}'
+
+    // Main
     + '.main{max-width:1200px;margin:0 auto;padding:40px 48px}'
-    + '.sec-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-radius:8px 8px 0 0;border:1px solid var(--border2);margin-top:48px}'
+
+    // Section headers
+    + '.sec-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-radius:8px 8px 0 0;border:1px solid var(--border2);margin-top:48px;margin-bottom:0}'
     + '.sec-header + .group{border-radius:0;border-top:none;margin-top:0}'
     + '.sec-header + .group + .group,.sec-header ~ .group ~ .group{border-top:none;margin-top:0}'
-    + '.sec-api{background:linear-gradient(135deg,rgba(139,0,0,.18),rgba(13,10,16,.9))}'
+    + '.sec-api{background:linear-gradient(135deg,rgba(139,0,0,.18),rgba(13,10,16,.9));}'
     + '.sec-ui{background:linear-gradient(135deg,rgba(30,60,100,.2),rgba(13,10,16,.9));border-color:rgba(60,120,200,.3)}'
     + '.sec-left{display:flex;align-items:center;gap:14px}'
     + '.sec-badge{font-size:22px}'
-    + '.sec-title{font-family:var(--fh);font-size:17px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}'
+    + '.sec-title{font-family:var(--fh);font-size:17px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--text)}'
     + '.sec-right{display:flex;align-items:center;gap:14px}'
     + '.sec-stat{font-family:var(--fm);font-size:13px;font-weight:700}'
     + '.sec-ok{color:var(--green3)}.sec-fail{color:#ff6b6b}'
     + '.sec-bar-wrap{width:100px;height:6px;background:var(--bg4);border-radius:3px;overflow:hidden;border:1px solid var(--border)}'
     + '.sec-bar-fill{height:100%;background:var(--green3)}.sec-bar-fill.fail{background:var(--red2)}'
     + '.sec-pct{font-family:var(--fm);font-size:11px;color:var(--text3);min-width:32px;text-align:right}'
+
+    // Groups
     + '.group{margin-bottom:0;border:1px solid var(--border);border-top:none;overflow:hidden}'
     + '.group:last-child{border-radius:0 0 8px 8px;margin-bottom:48px}'
     + '.group-header{padding:16px 24px;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}'
     + '.group-pass .group-header{background:rgba(26,92,26,.08);border-bottom:1px solid rgba(76,175,80,.12)}'
     + '.group-fail .group-header{background:rgba(139,0,0,.12);border-bottom:1px solid rgba(180,20,0,.3)}'
     + '.group-skip .group-header{background:rgba(90,80,80,.06);border-bottom:1px solid var(--border)}'
-    + '.group-title{font-family:var(--fh);font-size:14px;font-weight:600;letter-spacing:.1em}'
+    + '.group-title{font-family:var(--fh);font-size:14px;font-weight:600;letter-spacing:.1em;color:var(--text)}'
     + '.group-meta{flex:1;display:flex;flex-direction:column;gap:4px;align-items:flex-end}'
     + '.group-desc{font-size:12px;color:var(--text3);font-style:italic;text-align:right}'
     + '.group-stats{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}'
@@ -574,10 +614,14 @@ function buildReport(groups, totalPass, totalFail, totalRun, elapsed) {
     + '.gs-skip{font-family:var(--fm);font-size:11px;color:var(--gold)}'
     + '.mini-bar{width:60px;height:4px;background:var(--bg4);border-radius:2px;overflow:hidden}'
     + '.mini-fill{height:100%;background:var(--green3)}.group-fail .mini-fill{background:var(--red2)}'
+
+    // Test table
     + '.test-table{width:100%;border-collapse:collapse}'
     + '.test-table th{padding:9px 16px;text-align:left;font-family:var(--fh);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border)}'
     + '.test-table td{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:top}'
-    + '.row-fail td{background:rgba(139,0,0,.06)}.row-skip td{opacity:.45}'
+    + '.row-pass:hover td{background:rgba(255,255,255,.015)}'
+    + '.row-fail td{background:rgba(139,0,0,.06)}.row-fail:hover td{background:rgba(139,0,0,.1)}'
+    + '.row-skip td{opacity:.45}'
     + '.col-status{width:52px;text-align:center}'
     + '.col-name{font-family:var(--fm);font-size:12px;color:var(--text);width:36%}'
     + '.col-desc{font-size:13px;color:var(--text2);font-style:italic}'
@@ -587,50 +631,72 @@ function buildReport(groups, totalPass, totalFail, totalRun, elapsed) {
     + '.err-msg{margin-top:6px;padding:8px 12px;background:rgba(139,0,0,.15);border-left:3px solid var(--red2);border-radius:0 4px 4px 0;font-family:var(--fm);font-size:11px;color:#ff9999;line-height:1.5;word-break:break-word;white-space:pre-wrap}'
     + '.skip-row{text-align:center;padding:18px;color:var(--text3);font-style:italic;font-size:13px}'
     + '.footer{text-align:center;padding:32px 48px;border-top:1px solid var(--border);font-family:var(--fm);font-size:11px;color:var(--text3)}'
+
+    // Failure summary
     + '.fail-summary{margin:32px 0 0;border:1px solid rgba(180,20,0,.45);border-radius:8px;overflow:hidden}'
     + '.fail-summary-header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;background:rgba(139,0,0,.18);border-bottom:1px solid rgba(180,20,0,.3);cursor:pointer;user-select:none}'
     + '.fail-summary-title{font-family:var(--fh);font-size:13px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#ff6b6b}'
     + '.fail-summary-count{font-family:var(--fm);font-size:12px;color:#ff9999}'
     + '.fail-summary-toggle{font-family:var(--fm);font-size:11px;color:var(--text3)}'
-    + '.fail-summary-body{display:none}.fail-summary-body.open{display:block}'
+    + '.fail-summary-body{display:none}'
+    + '.fail-summary-body.open{display:block}'
     + '.fail-table{width:100%;border-collapse:collapse}'
     + '.fail-table th{padding:8px 16px;text-align:left;font-family:var(--fh);font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border)}'
     + '.fail-table td{padding:9px 16px;border-bottom:1px solid rgba(255,255,255,.03);vertical-align:top;font-size:12px}'
+    + '.fail-table tr:last-child td{border-bottom:none}'
+    + '.fail-table tr:hover td{background:rgba(139,0,0,.08)}'
     + '.fcol-n{font-family:var(--fm);font-size:11px;color:var(--text3);width:36px;text-align:right;padding-right:8px}'
     + '.fcol-group{font-size:11px;color:var(--text3);font-style:italic;width:20%;padding-right:8px}'
     + '.fcol-name{font-family:var(--fm);font-size:12px;color:var(--text);width:30%}'
     + '.fcol-err{font-family:var(--fm);font-size:11px;color:#ff9999;word-break:break-word;white-space:pre-wrap}';
 
   return '<!DOCTYPE html>\n<html lang="ru">\n<head>\n'
-    + '<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">\n'
+    + '<meta charset="UTF-8">\n'
+    + '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
     + '<title>VTM — Полный отчёт тестов</title>\n'
     + '<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,400&family=Share+Tech+Mono&display=swap" rel="stylesheet">\n'
-    + '<style>' + css + '</style>\n</head>\n<body>\n'
-    + '<header class="header">\n<div class="header-top">\n'
-    + '<div class="logo"><span class="logo-drop">&#129752; Vampire: The Masquerade — Chronicle Manager</span>'
-    + '<div class="logo-title">VTM Chronicle Manager</div>'
-    + '<div class="logo-sub">Полный отчёт тестирования</div></div>\n'
-    + '<div class="stamp">&#128197; ' + esc(stamp) + '<br>API: ' + api.total + ' &nbsp;&#183;&nbsp; UI: ' + ui.total + '<br>Всего: ' + totalRun + ' &nbsp;&#183;&nbsp; ' + elapsed + 's</div>\n'
-    + '</div>\n'
-    + '<div class="status-banner ' + (allGreen ? 'all-pass' : 'has-fail') + '">\n'
-    + '<div class="status-icon">' + (allGreen ? '&#129001;' : '&#128308;') + '</div>\n'
-    + '<div><div class="status-headline">' + (allGreen ? 'Все тесты прошли успешно' : 'Есть упавшие тесты: ' + totalFail) + '</div>'
-    + '<div class="status-sub">' + totalPass + ' прошли &nbsp;&middot;&nbsp; ' + totalFail + ' упали &nbsp;&middot;&nbsp; ' + totalRun + ' всего</div></div>\n'
-    + '</div>\n'
-    + '<div class="stats-row">\n'
-    + '<div class="stat stat-pass"><div class="stat-num">' + totalPass + '</div><div class="stat-lbl">Прошли</div></div>\n'
-    + '<div class="stat stat-fail"><div class="stat-num">' + totalFail + '</div><div class="stat-lbl">Упали</div></div>\n'
-    + '<div class="stat stat-total"><div class="stat-num">' + totalRun + '</div><div class="stat-lbl">Всего</div></div>\n'
-    + '<div class="stat stat-time"><div class="stat-num">' + elapsed + 's</div><div class="stat-lbl">Время</div></div>\n'
-    + '</div>\n'
-    + '<div class="progress-wrap"><div class="progress-label"><span>Общий прогресс</span><span>' + pct + '%</span></div>'
-    + '<div class="progress-track"><div class="progress-fill ' + (allGreen ? '' : 'fail') + '" style="width:' + pct + '%"></div></div></div>\n'
+    + '<style>' + css + '</style>\n'
+    + '</head>\n<body>\n'
+
+    + '<header class="header">\n'
+    + '  <div class="header-top">\n'
+    + '    <div class="logo">\n'
+    + '      <span class="logo-drop">&#129752; Vampire: The Masquerade — Paris 2010</span>\n'
+    + '      <div class="logo-title">VTM Chronicle Manager</div>\n'
+    + '      <div class="logo-sub">Полный отчёт тестирования</div>\n'
+    + '    </div>\n'
+    + '    <div class="stamp">&#128197; ' + esc(stamp) + '<br>'
+    + '      API: ' + api.total + ' тестов &nbsp;&#183;&nbsp; UI: ' + ui.total + ' тестов<br>'
+    + '      Всего: ' + totalRun + ' &nbsp;&#183;&nbsp; ' + elapsed + 's</div>\n'
+    + '  </div>\n'
+
+    + '  <div class="status-banner ' + (allGreen ? 'all-pass' : 'has-fail') + '">\n'
+    + '    <div class="status-icon">' + (allGreen ? '&#129001;' : '&#128308;') + '</div>\n'
+    + '    <div>\n'
+    + '      <div class="status-headline">' + (allGreen ? 'Все тесты прошли успешно' : 'Есть упавшие тесты: ' + totalFail) + '</div>\n'
+    + '      <div class="status-sub">' + totalPass + ' прошли &nbsp;&middot;&nbsp; ' + totalFail + ' упали &nbsp;&middot;&nbsp; ' + totalRun + ' всего</div>\n'
+    + '    </div>\n'
+    + '  </div>\n'
+
+    + '  <div class="stats-row">\n'
+    + '    <div class="stat stat-pass"><div class="stat-num">' + totalPass + '</div><div class="stat-lbl">Прошли</div></div>\n'
+    + '    <div class="stat stat-fail"><div class="stat-num">' + totalFail + '</div><div class="stat-lbl">Упали</div></div>\n'
+    + '    <div class="stat stat-total"><div class="stat-num">' + totalRun + '</div><div class="stat-lbl">Всего</div></div>\n'
+    + '    <div class="stat stat-time"><div class="stat-num">' + elapsed + 's</div><div class="stat-lbl">Время</div></div>\n'
+    + '  </div>\n'
+
+    + '  <div class="progress-wrap">\n'
+    + '    <div class="progress-label"><span>Общий прогресс</span><span>' + pct + '%</span></div>\n'
+    + '    <div class="progress-track"><div class="progress-fill ' + (allGreen ? '' : 'fail') + '" style="width:' + pct + '%"></div></div>\n'
+    + '  </div>\n'
     + '</header>\n'
+
     + '<main class="main">\n'
     + (totalFail > 0 ? buildFailureSummary(groups, totalFail) : '')
     + sectionBlock('api', 'API-тесты', '&#9889;', api, apiGroups)
     + sectionBlock('ui',  'UI-тесты &mdash; Selenium', '&#127760;', ui, uiGroups)
     + '</main>\n'
+
     + '<footer class="footer">Сгенерировано автоматически &nbsp;&middot;&nbsp; tests/run_all_tests.js &nbsp;&middot;&nbsp; ' + esc(stamp) + '</footer>\n'
     + '</body>\n</html>';
 }
@@ -647,6 +713,7 @@ async function main() {
   process.stdout.write('  ' + new Date().toLocaleString('ru-RU', { hour12: false }) + '\n');
   process.stdout.write('\x1b[1m' + hr + '\x1b[0m\n');
 
+  // Запускаем сервер (один на оба набора тестов)
   let serverProc = null;
   if (!await serverIsUp()) {
     process.stdout.write('\n  \x1b[33m⟳\x1b[0m  Запуск веб-сервера на порту 3000...\n');
@@ -670,7 +737,7 @@ async function main() {
   // СЕКЦИЯ 1 — API-ТЕСТЫ
   // ═══════════════════════════════════════════════════════════════════════════
 
-  section('api', 'Секция 1 — API-тесты', '9 групп · без браузера · файлы, синтаксис, HTTP, PowerShell');
+  section('api', 'Секция 1 — API-тесты', '7 групп · без браузера · файлы, синтаксис, данные, HTTP');
 
   // ── Группа 1: Структура файлов ─────────────────────────────────────────────
   group('📁 Структура файлов', 'Наличие всех ключевых файлов и папок проекта');
@@ -706,7 +773,70 @@ async function main() {
   });
 
   // ── Группа 3: Целостность данных ──────────────────────────────────────────
-  group('📝 Целостность данных', 'Шаблоны скриптов и структура .md без приватных данных');
+  group('📝 Целостность данных', 'Содержимое .md файлов без запуска сервера');
+
+  await t('characters_ALL.md — нет фантомной записи "3"',
+    'Тестовая запись vampires/3/3.md должна быть удалена',
+    function() { assertNotInc(readFile('characters/characters_ALL.md'), 'vampires/3/3.md', 'Найдена битая запись'); });
+
+  await t('characters_ALL.md — содержит Эмилия Индра-Ландорг',
+    'Персонаж переименован: ссылка в сводном списке обновлена',
+    function() { assertInc(readFile('characters/characters_ALL.md'), 'Эмилия Индра-Ландорг'); });
+
+  await t('Файл Эмилии Индра-Ландорг существует',
+    'После переименования папка и файл называются точно "Эмилия Индра-Ландорг"',
+    function() { assert(fileExists('characters/vampires/Эмилия Индра-Ландорг/Эмилия Индра-Ландорг.md')); });
+
+  await t('Старой папки "Эмилия" нет',
+    'Исходная папка characters/vampires/Эмилия/ не должна существовать',
+    function() { assert(!fileExists('characters/vampires/Эмилия/Эмилия.md'), 'Старый файл ещё существует'); });
+
+  await t('Ганеш.md → ссылка на Эмилию Индра-Ландорг',
+    'Обратная ссылка мужа указывает на актуальное имя',
+    function() { assertInc(readFile('characters/vampires/Ганеш/Ганеш.md'), 'Эмилия%20Индра-Ландорг'); });
+
+  await t('Ямала.md — поле "Род: Красная Шапка"',
+    'Для фей поле "Род" используется вместо "Клан"',
+    function() { assertInc(readFile('characters/fairies/Ямала/Ямала.md'), '**Род:** Красная Шапка'); });
+
+  await t('Ева.md — пометка "Японка" в особенностях',
+    'Национальность явно указана в поле Особенности',
+    function() { assertInc(readFile('characters/vampires/Ева/Ева.md'), 'Японка'); });
+
+  await t('Ева.md — Тома Бошен как поручитель',
+    'В разделе Отношения есть ссылка на Тома Бошена',
+    function() { assertInc(readFile('characters/vampires/Ева/Ева.md'), 'Тома Бошен'); });
+
+  await t('Верене.md — промт «Тёмные века» добавлен',
+    'Промт средневекового облика XIV в. добавлен в карточку',
+    function() { assertInc(readFile('characters/vampires/Верене де Кюстин/Верене де Кюстин.md'), 'Тёмные века'); });
+
+  await t('Верене.md — промт «Тёмные века» без пирсинга',
+    'В блоке «Тёмные века» нет "septum piercing" — анахронизм для XIV в.',
+    function() {
+      var md  = readFile('characters/vampires/Верене де Кюстин/Верене де Кюстин.md');
+      var idx = md.indexOf('Тёмные века');
+      assert(idx !== -1, 'Блок «Тёмные века» не найден');
+      assertNotInc(md.slice(idx, idx + 600), 'septum piercing', 'Септум-пирсинг в блоке «Тёмные века»');
+    });
+
+  await t('Journal_Ямала/retrospective.md существует',
+    'Ретроспектива дневника лежит в canonical-файле retrospective.md',
+    function() { assert(fileExists('characters/fairies/Ямала/Journal_Ямала/retrospective.md')); });
+
+  await t('Все локации имеют 6 обязательных мета-полей',
+    'Каждый .md в locations/ содержит: Название, Округ, Район, Адрес, Зона, Контроль',
+    function() {
+      var files   = findMDFiles('locations');
+      var missing = [];
+      ['Название', 'Округ', 'Район', 'Адрес', 'Зона', 'Контроль'].forEach(function(field) {
+        files.forEach(function(f) {
+          var c = fs.readFileSync(f, 'utf-8');
+          if (!c.includes('**' + field + ':**')) missing.push(path.basename(f) + ': "' + field + '"');
+        });
+      });
+      assert(missing.length === 0, 'Без полей: ' + missing.slice(0, 4).join('; '));
+    });
 
   await t('new_npc.ps1 — нет жёсткого "Активен"',
     'Шаблон НПС использует нейтральный "Жив / Жива"',
@@ -720,26 +850,10 @@ async function main() {
     'Шаблон локации включает обязательное поле Название',
     function() { assertInc(readFile('tools/new_location.ps1'), 'Название'); });
 
-  await t('Все локации имеют 6 обязательных мета-полей',
-    'Каждый .md в locations/ содержит: Название, Округ, Район, Адрес, Зона, Контроль',
-    function() {
-      var files = findMDFiles('locations');
-      if (!files.length) return; // нет локаций — пропускаем
-      var missing = [];
-      ['Название', 'Округ', 'Район', 'Адрес', 'Зона', 'Контроль'].forEach(function(field) {
-        files.forEach(function(f) {
-          var c = fs.readFileSync(f, 'utf-8');
-          if (!c.includes('**' + field + ':**')) missing.push(path.basename(f) + ': "' + field + '"');
-        });
-      });
-      assert(missing.length === 0, 'Без полей: ' + missing.slice(0, 4).join('; '));
-    });
-
   await t('Все вампиры имеют поле "Линейка WoD"',
     'Обязательное поле для lineage в парсере server.js. Только главные карточки.',
     function() {
       var vampDir = path.join(ROOT, 'characters', 'vampires');
-      if (!fs.existsSync(vampDir)) return; // нет вампиров — пропускаем
       var bad = [];
       fs.readdirSync(vampDir, { withFileTypes: true }).forEach(function(entry) {
         if (!entry.isDirectory()) return;
@@ -752,99 +866,225 @@ async function main() {
     });
 
   // ── Группа 4: API — Персонажи ─────────────────────────────────────────────
-  group('🧛 API — Персонажи', 'GET /api/characters: структура ответа');
+  group('🧛 API — Персонажи', 'GET /api/characters: структура и содержимое ответа');
 
   await t('/api/characters → 200, массив', 'HTTP 200 и JSON-массив',
     async function() {
       var r = await apiGet(BASE + '/api/characters');
       assertEq(r.status, 200, 'HTTP статус');
-      assert(Array.isArray(r.json), 'Ответ не является массивом');
+      assert(Array.isArray(r.json), 'Не массив');
     });
 
-  await t('/api/characters — структура полей (если есть персонажи)',
-    'Каждый объект содержит name, lineage, statusType',
+  await t('/api/characters → не менее 30 персонажей', 'Вампиры + феи + смертные ≥ 30',
     async function() {
       var r = await apiGet(BASE + '/api/characters');
-      if (!r.json.length) return; // нет персонажей — ок для шаблона
-      r.json.forEach(function(c, i) {
-        assert(c.name,       'chars[' + i + '].name отсутствует');
-        assert(c.lineage,    'chars[' + i + '].lineage отсутствует');
-        assert(c.statusType, 'chars[' + i + '].statusType отсутствует');
-      });
+      assertGte(r.json.length, 30, 'Количество персонажей');
+    });
+
+  await t('/api/characters — все имеют name, lineage, statusType',
+    'Обязательные поля для рендера карточки в UI',
+    async function() {
+      var r   = await apiGet(BASE + '/api/characters');
+      var bad = r.json.filter(function(c) { return !c.name || !c.lineage || !c.statusType; });
+      assert(bad.length === 0, 'Без обязательных полей: ' + bad.map(function(c) { return c.name || '?'; }).join(', '));
+    });
+
+  await t('/api/characters — персонаж Ева присутствует', 'Малкавиан-детектив, японка-альбинос, ПК',
+    async function() {
+      var r = await apiGet(BASE + '/api/characters');
+      assert(r.json.some(function(c) { return c.name === 'Ева'; }), 'Ева не найдена');
+    });
+
+  await t('/api/characters — Ямала.clan = "Красная Шапка"', 'Поле "Род" для фей подставляется в clan',
+    async function() {
+      var r  = await apiGet(BASE + '/api/characters');
+      var ch = r.json.find(function(c) { return c.name === 'Ямала'; });
+      assert(ch, 'Ямала не найдена');
+      assertEq(ch.clan, 'Красная Шапка', 'clan Ямалы');
+    });
+
+  await t('/api/characters — Эмилия Индра-Ландорг присутствует',
+    'Персонаж отображается под новым полным именем',
+    async function() {
+      var r = await apiGet(BASE + '/api/characters');
+      assert(r.json.some(function(c) { return c.name === 'Эмилия Индра-Ландорг'; }));
+    });
+
+  await t('/api/characters — нет персонажа "3"', 'Фантомная запись "3" удалена',
+    async function() {
+      var r = await apiGet(BASE + '/api/characters');
+      assert(!r.json.some(function(c) { return c.name === '3'; }), 'Найден фантомный "3"');
+    });
+
+  await t('/api/characters — смертные определяются корректно', 'В mortals/ lineage="mortal" у всех',
+    async function() {
+      var r      = await apiGet(BASE + '/api/characters');
+      var mortal = r.json.filter(function(c) { return c.lineage === 'mortal'; });
+      assertGte(mortal.length, 3, 'Смертных персонажей');
     });
 
   // ── Группа 5: API — Локации ───────────────────────────────────────────────
-  group('🗺️  API — Локации', 'GET /api/locations: структура ответа');
+  group('🗺️  API — Локации', 'GET /api/locations: парсинг мета-полей и VtM-данных');
 
   await t('/api/locations → 200, массив', 'HTTP 200 и JSON-массив',
     async function() {
       var r = await apiGet(BASE + '/api/locations');
       assertEq(r.status, 200, 'HTTP статус');
-      assert(Array.isArray(r.json), 'Ответ не является массивом');
+      assert(Array.isArray(r.json), 'Не массив');
     });
 
-  await t('/api/locations — структура полей (если есть локации)',
-    'Каждый объект содержит name, district, zone',
+  await t('/api/locations → ровно 25 локаций', '25 карточек в проекте',
     async function() {
       var r = await apiGet(BASE + '/api/locations');
-      if (!r.json.length) return;
-      r.json.forEach(function(l, i) {
-        assert(l.name !== undefined, 'locations[' + i + '].name отсутствует');
-      });
+      assertEq(r.json.length, 25, 'Количество локаций');
     });
 
-  // ── Группа 6: API — Безопасность ──────────────────────────────────────────
-  group('🔒 API — Безопасность', 'Path traversal и защита эндпоинтов');
+  await t('/api/locations — все имеют subtype', 'Поле subtype из **Название:** обязательно для всех',
+    async function() {
+      var r   = await apiGet(BASE + '/api/locations');
+      var bad = r.json.filter(function(l) { return !l.subtype; });
+      assert(bad.length === 0, 'Без subtype: ' + bad.map(function(l) { return l.slug; }).join(', '));
+    });
+
+  await t('/api/locations — все имеют district', 'Поле district обязательно для фильтра по округам',
+    async function() {
+      var r   = await apiGet(BASE + '/api/locations');
+      var bad = r.json.filter(function(l) { return !l.district; });
+      assert(bad.length === 0, 'Без district: ' + bad.map(function(l) { return l.slug; }).join(', '));
+    });
+
+  await t('/api/locations — Опера Гарнье имеет locStatus',
+    'Таблица ## 🩸 Контекст Камарильи парсится: | **Статус** | → locStatus',
+    async function() {
+      var r   = await apiGet(BASE + '/api/locations');
+      var loc = r.json.find(function(l) { return l.slug.includes('Опера'); });
+      assert(loc, 'Опера не найдена');
+      assert(loc.locStatus, 'locStatus пуст у ' + loc.slug);
+    });
+
+  await t('/api/locations — Фобур-Сент-Антуан имеет vtmText',
+    'Свободный текст из ## VtM-контекст парсится в vtmText',
+    async function() {
+      var r   = await apiGet(BASE + '/api/locations');
+      var loc = r.json.find(function(l) { return l.slug.includes('Фобур'); });
+      assert(loc, 'Фобур не найден');
+      assert(loc.vtmText && loc.vtmText.length > 20, 'vtmText пуст');
+    });
+
+  await t('/api/locations — Фобур vtmText без "**Маскарад:**"',
+    'Строка **Маскарад:** вырезается из vtmText при парсинге',
+    async function() {
+      var r   = await apiGet(BASE + '/api/locations');
+      var loc = r.json.find(function(l) { return l.slug.includes('Фобур'); });
+      assert(loc && loc.vtmText, 'Фобур/vtmText не найден');
+      assertNotInc(loc.vtmText, '**Маскарад:**', 'Маскарад не вырезан из vtmText');
+    });
+
+  await t('/api/locations — Фобур имеет keyPoints (≥3)',
+    'Таблица ## Ключевые точки парсится в массив keyPoints',
+    async function() {
+      var r   = await apiGet(BASE + '/api/locations');
+      var loc = r.json.find(function(l) { return l.slug.includes('Фобур'); });
+      assert(loc, 'Фобур не найден');
+      assert(Array.isArray(loc.keyPoints) && loc.keyPoints.length >= 3,
+        'keyPoints: ' + JSON.stringify(loc.keyPoints));
+    });
+
+  // ── Группа 6: API — Дневники ──────────────────────────────────────────────
+  group('📖 API — Дневники', 'GET /api/characters/:name/diary: парсинг форматов');
+
+  await t('Ямала ретроспектива → format=retrospective',
+    'Файл с множеством ### 📅 — формат "retrospective"',
+    async function() {
+      var r = await apiGet(BASE + '/api/characters/' + encodeURIComponent('Ямала') + '/diary?file=' + encodeURIComponent('Journal_Ямала/retrospective.md'));
+      assertEq(r.status, 200, 'HTTP статус');
+      assertEq(r.json.format, 'retrospective', 'format');
+    });
+
+  await t('Ямала ретроспектива → sections ≥ 10',
+    'Ретроспектива XI–XXI вв. — секций должно быть много',
+    async function() {
+      var r = await apiGet(BASE + '/api/characters/' + encodeURIComponent('Ямала') + '/diary?file=' + encodeURIComponent('Journal_Ямала/retrospective.md'));
+      assertGte(r.json.sections.length, 10, 'Количество секций');
+    });
+
+  await t('Верене 2010-11 → format=entry',
+    'Одиночная запись с полями Автор/Локация/Тон/Текст — "entry"',
+    async function() {
+      var r = await apiGet(BASE + '/api/characters/' + encodeURIComponent('Верене де Кюстин') + '/diary?file=' + encodeURIComponent('Journal_Верене/2010-11.md'));
+      assertEq(r.status, 200, 'HTTP статус');
+      assertEq(r.json.format, 'entry', 'format');
+    });
+
+  await t('Верене 2010-11 → поле text заполнено',
+    'Текст записи парсится из блока "- **📖 Текст записи:**"',
+    async function() {
+      var r = await apiGet(BASE + '/api/characters/' + encodeURIComponent('Верене де Кюстин') + '/diary?file=' + encodeURIComponent('Journal_Верене/2010-11.md'));
+      assert(r.json.text && r.json.text.length > 20, 'Поле text пусто');
+    });
 
   await t('Path traversal ../../ → 403 Forbidden',
-    'Попытка выйти за пределы папки персонажа через ../../ блокируется',
+    'Попытка выйти за пределы папки блокируется сервером',
     async function() {
-      var r = await apiGet(BASE + '/api/characters/..%2F..%2Fweb%2Fserver/diary');
-      assert(r.status === 403 || r.status === 404,
-        'Ожидали 403 или 404, получили ' + r.status);
+      var r = await apiGet(BASE + '/api/characters/' + encodeURIComponent('Ямала') + '/diary?file=' + encodeURIComponent('../../web/server.js'));
+      assertEq(r.status, 403, 'Ожидался 403 Forbidden');
     });
 
-  // ── Группа 7: API — Граф и Статус ────────────────────────────────────────
+  // ── Группа 7: API — Граф и Статус ─────────────────────────────────────────
   group('📊 API — Граф и Статус', 'GET /api/graph и /api/status');
 
   await t('/api/graph → 200, nodes + links', 'Граф возвращает узлы и рёбра',
     async function() {
       var r = await apiGet(BASE + '/api/graph');
       assertEq(r.status, 200, 'HTTP статус');
-      assert(r.json && Array.isArray(r.json.nodes), '.nodes не является массивом');
-      assert(r.json && Array.isArray(r.json.links), '.links не является массивом');
+      assert(Array.isArray(r.json.nodes), 'nodes не массив');
+      assert(Array.isArray(r.json.links), 'links не массив');
     });
 
-  await t('/api/status → 200, JSON', 'Статус-дашборд доступен',
+  await t('/api/graph → nodes ≥ 30', 'Каждый персонаж = узел графа',
+    async function() {
+      var r = await apiGet(BASE + '/api/graph');
+      assertGte(r.json.nodes.length, 30, 'Узлов в графе');
+    });
+
+  await t('/api/graph → есть рёбра', 'Отношения отображаются как рёбра',
+    async function() {
+      var r = await apiGet(BASE + '/api/graph');
+      assertGte(r.json.links.length, 1, 'Рёбер в графе');
+    });
+
+  await t('/api/status → 200, поле vampires ≥ 20', 'Статус-дашборд возвращает статистику',
     async function() {
       var r = await apiGet(BASE + '/api/status');
       assertEq(r.status, 200, 'HTTP статус');
-      assert(r.json !== null, 'Тело ответа пустое');
+      assert(typeof r.json.vampires === 'number', 'vampires не число');
+      assertGte(r.json.vampires, 20, 'Вампиров');
     });
 
-  await t('/api/status → brokenLinks = 0 или null',
-    'Нет нарушенных внутренних ссылок',
+  await t('/api/status → brokenLinks = 0 или null', 'После исправлений ошибок не должно быть',
     async function() {
       var r  = await apiGet(BASE + '/api/status');
-      var bl = r.json ? r.json.brokenLinks : null;
+      var bl = r.json.brokenLinks;
       assert(bl === null || bl === 0, 'brokenLinks = ' + bl);
     });
 
-  // ── Группа 8: PowerShell — Прямой запуск ─────────────────────────────────
+  // ── Группа: PowerShell прямой запуск ────────────────────────────────────────
+
   group('⚡ PowerShell — Прямой запуск', 'Скрипты tools/ вне сервера: validate, search, status');
 
   await t('validate_links.ps1 -Force → код выхода 0',
-    'Запуск скрипта напрямую; ожидаем exitCode=0 и "Checked" в stdout',
+    'Запуск скрипта напрямую; ожидаем exitCode=0 и "checked" в stdout',
     function() {
       var r = runPS('tools/validate_links.ps1', '-Force');
       assert(r.status === 0, 'exitCode=' + r.status + ' stderr: ' + (r.stderr || '').slice(0, 300));
       assertInc(r.stdout, 'Checked', 'stdout должен содержать "Checked"');
     });
 
-  await t('search.ps1 находит вхождения "WoD"',
-    'Запуск search.ps1 -Query "WoD"; термин присутствует в шаблонных файлах',
+  await t('search.ps1 находит вхождения "Камарилья"',
+    'Запуск search.ps1 -Query "Камарилья"; проверяем что найдено > 0 результатов',
     function() {
-      var r = runPS('tools/search.ps1', "-Query 'WoD'");
+      var r = runPS('tools/search.ps1', '-Query \'Камарилья\'');
+      // ReadKey в конце скрипта может дать ненулевой код — проверяем stdout
       assertInc(r.stdout, 'result', 'stdout должен содержать "result(s) for"');
       assert(!/No results/.test(r.stdout), 'search вернул "No results" — данные не найдены');
     });
@@ -853,14 +1093,27 @@ async function main() {
     'Запуск status.ps1; проверяем заголовок и итоговую строку Total:',
     function() {
       var r = runPS('tools/status.ps1', '');
-      assertInc(r.stdout, 'VTM', 'Заголовок "VTM" в stdout');
+      assertInc(r.stdout, 'VTM Paris 2010', 'Заголовок "VTM Paris 2010" в stdout');
       assertInc(r.stdout, 'Total:', 'Строка "Total:" в stdout');
     });
 
-  // ── Группа 9: PowerShell — Через API ─────────────────────────────────────
+  await t('new_npc.ps1 отклоняет существующий персонаж',
+    'Попытка создать уже существующего НПС → код выхода 1 и WARN в stdout',
+    function() {
+      // Берём первого найденного вампира для теста на дубликат
+      var vampDir = path.join(ROOT, 'characters', 'vampires');
+      var existing = fs.readdirSync(vampDir).filter(function(n) { return !n.startsWith('.'); })[0];
+      assert(existing, 'В characters/vampires/ нет ни одного персонажа');
+      var r = runPS('tools/new_npc.ps1', "-Name '" + existing.replace(/'/g, "''") + "' -Type vampire -Force");
+      assert(r.status !== 0, 'Ожидали ненулевой код для дубликата, получили ' + r.status);
+      assertInc(r.stdout, 'существует', 'Сообщение "существует" в stdout');
+    });
+
+  // ── Группа: PowerShell через API ────────────────────────────────────────────
+
   group('🌐 PowerShell — Через API', 'POST /api/run-tool: validate_links, search, status, new_module');
 
-  await t('API validate_links → success: true + "Checked" в выводе',
+  await t('API validate_links → success: true + "checked" в выводе',
     'POST /api/run-tool {tool:"validate_links"} — повтор при ECONNRESET',
     async function() {
       var d;
@@ -879,12 +1132,13 @@ async function main() {
       assertInc(d.output, 'Checked', '"Checked" в выводе скрипта');
     });
 
-  await t('API search "WoD" → результаты в выводе',
-    'POST /api/run-tool {tool:"search", params:{Query:"WoD"}}',
+  await t('API search "Малкавиан" → результаты в выводе',
+    'POST /api/run-tool {tool:"search", params:{Query:"Малкавиан"}}',
     async function() {
-      var d = await apiPost('/api/run-tool', { tool: 'search', params: { Query: 'WoD' } });
+      var d = await apiPost('/api/run-tool', { tool: 'search', params: { Query: 'Малкавиан' } });
+      // ReadKey в конце скрипта → exitCode=1 → success=false; проверяем output
       assertInc(d.output, 'result', '"result(s) for" в выводе');
-      assert(!/No results/.test(d.output), 'API search вернул "No results"');
+      assert(!/No results/.test(d.output), 'API search вернул "No results" — ожидались данные');
     });
 
   await t('API status → "Total:" в выводе',
@@ -898,7 +1152,9 @@ async function main() {
     'POST /api/run-tool {tool:"new_module", params:{Name:"тест_2010_автомодуль"}}',
     async function() {
       var modDir = path.join(ROOT, 'modules', 'тест_2010_автомодуль');
+      // Пред-очистка на случай остатков прошлого прогона
       if (fs.existsSync(modDir)) fs.rmSync(modDir, { recursive: true, force: true });
+
       var d = await apiPost('/api/run-tool', { tool: 'new_module', params: { Name: 'тест_2010_автомодуль' } });
       assert(d.success === true, 'success=false, output: ' + (d.output || '').slice(0, 300));
       assert(fs.existsSync(modDir), 'Папка modules/тест_2010_автомодуль не создана');
@@ -908,8 +1164,10 @@ async function main() {
     'Повторный POST с тем же Name → success: false',
     async function() {
       var d = await apiPost('/api/run-tool', { tool: 'new_module', params: { Name: 'тест_2010_автомодуль' } });
-      assert(d.success === false, 'Ожидали success=false для существующего модуля');
+      assert(d.success === false, 'Ожидали success=false для существующего модуля, получили true');
       assertInc(d.output, 'существует', '"существует" в сообщении об ошибке');
+
+      // Очистка тестового модуля после обоих тестов
       var modDir = path.join(ROOT, 'modules', 'тест_2010_автомодуль');
       if (fs.existsSync(modDir)) fs.rmSync(modDir, { recursive: true, force: true });
     });
@@ -929,7 +1187,7 @@ async function main() {
   // СЕКЦИЯ 2 — UI-ТЕСТЫ (Selenium)
   // ═══════════════════════════════════════════════════════════════════════════
 
-  section('ui', 'Секция 2 — UI-тесты (Selenium)', '9 групп · Headless Chrome · SPA, навигация, создание персонажей');
+  section('ui', 'Секция 2 — UI-тесты (Selenium)', '8 групп · Headless Chrome · SPA, навигация, модалы, граф');
 
   process.stdout.write('\n  \x1b[33m⟳\x1b[0m  Запуск Chrome (headless)...\n');
   const chromeOptions = new chrome.Options();
@@ -950,7 +1208,7 @@ async function main() {
 
   try {
 
-    // ── Группа 1: Загрузка ────────────────────────────────────────────────────
+    // ── Группа 8: Загрузка ────────────────────────────────────────────────────
     group('🌐 Загрузка приложения', 'Базовые проверки рендеринга SPA');
 
     await t('Приложение открывается', 'GET / не выбрасывает исключений',
@@ -977,7 +1235,7 @@ async function main() {
     await t('Панель активна по умолчанию', '#page-dashboard.active',
       async () => { await driver.findElement(By.css('#page-dashboard.active')); });
 
-    // ── Группа 2: Навигация ───────────────────────────────────────────────────
+    // ── Группа 9: Навигация ───────────────────────────────────────────────────
     group('🧭 Навигация', 'Переключение разделов через сайдбар');
 
     for (const [page, label] of [
@@ -988,7 +1246,7 @@ async function main() {
         async () => { await navTo(driver, page); });
     }
 
-    // ── Группа 3: Панель управления ──────────────────────────────────────────
+    // ── Группа 10: Панель управления ──────────────────────────────────────────
     group('📊 Панель управления', 'Загрузка статистики хроники');
 
     await t('Данные загрузились', 'GET / + спиннер в #dash-content исчез',
@@ -1012,17 +1270,64 @@ async function main() {
         }
       });
 
-    // ── Группа 4: Модал создания персонажа ───────────────────────────────────
-    group('📋 Модал создания персонажа', 'Двухшаговый флоу — линейка, поля, закрытие');
+    // ── Группа 11: Персонажи ──────────────────────────────────────────────────
+    group('🎭 Персонажи', 'Грид персонажей, фильтры, поиск');
 
-    await t('Кнопка "+ Создать" на странице персонажей',
-      'Переход на characters + #btn-open-create-char виден',
+    await t('Грид загружается', 'Переход + спиннер в #chars-grid исчез',
       async () => {
         await navTo(driver, 'characters');
         await waitForNoSpinner(driver, 'chars-grid', 10000);
+      });
+
+    await t('Карточки присутствуют', 'Минимум 1 .char-card',
+      async () => {
+        await driver.wait(until.elementLocated(By.css('.char-card')), WAIT);
+        const cards = await driver.findElements(By.css('.char-card'));
+        if (!cards.length) throw new Error('No .char-card elements');
+      });
+
+    await t('Поиск фильтрует список', 'Нулевой запрос убирает карточки',
+      async () => {
+        await driver.executeScript('var el=document.getElementById("search-input");el.value="";el.dispatchEvent(new Event("input",{bubbles:true}));');
+        await driver.sleep(300);
+        const before = await countVisible(driver, '.char-card');
+        await driver.executeScript('var el=document.getElementById("search-input");el.value="zzznonsense999";el.dispatchEvent(new Event("input",{bubbles:true}));');
+        await driver.sleep(500);
+        const after = await countVisible(driver, '.char-card');
+        await driver.executeScript('var el=document.getElementById("search-input");el.value="";el.dispatchEvent(new Event("input",{bubbles:true}));');
+        await driver.sleep(300);
+        if (after >= before) throw new Error('No filter effect: ' + before + ' → ' + after);
+      });
+
+    await t('Сброс поиска восстанавливает список', 'После clear — карточки видны',
+      async () => {
+        await driver.executeScript('var el=document.getElementById("search-input");el.value="zzznonsense999";el.dispatchEvent(new Event("input",{bubbles:true}));');
+        await driver.sleep(300);
+        await driver.executeScript('var el=document.getElementById("search-input");el.value="";el.dispatchEvent(new Event("input",{bubbles:true}));');
+        await driver.sleep(400);
+        const total = await countVisible(driver, '.char-card');
+        if (total === 0) throw new Error('No cards after clear');
+      });
+
+    await t('Фильтр по линейке', 'Выбор "vampire" меняет набор карточек',
+      async () => {
+        const all = await countVisible(driver, '.char-card');
+        await driver.executeScript('var s=document.getElementById("filter-lineage");s.value="vampire";s.dispatchEvent(new Event("change",{bubbles:true}));');
+        await driver.sleep(500);
+        const vamp = await countVisible(driver, '.char-card');
+        await driver.executeScript('var s=document.getElementById("filter-lineage");s.value="all";s.dispatchEvent(new Event("change",{bubbles:true}));');
+        await driver.sleep(300);
+        if (vamp === all) throw new Error('Filter had no effect: ' + all + ' → ' + vamp);
+      });
+
+    await t('Кнопка "+ Создать" видна', '#btn-open-create-char видима',
+      async () => {
         const btn = await driver.findElement(By.id('btn-open-create-char'));
         if (!(await btn.isDisplayed())) throw new Error('Button not visible');
       });
+
+    // ── Группа 12: Модал создания персонажа ──────────────────────────────────
+    group('📋 Модал создания персонажа', 'Двухшаговый флоу — линейка, поля, закрытие');
 
     await t('Открытие модала', 'Клик "+ Создать" → #char-modal виден',
       async () => {
@@ -1054,7 +1359,7 @@ async function main() {
         await waitModalHidden(driver, 'char-modal');
       });
 
-    // ── Группа 5: Граф отношений ──────────────────────────────────────────────
+    // ── Группа 13: Граф отношений ─────────────────────────────────────────────
     group('🕸 Граф отношений', 'D3.js SVG граф: рендеринг, тулбар, узлы');
 
     await t('SVG присутствует', 'Переход + #graph-svg виден',
@@ -1070,18 +1375,14 @@ async function main() {
         if (btns.length < 3) throw new Error('btn-icon: ' + btns.length);
       });
 
-    await t('Узлы графа отрисованы (если есть персонажи)',
-      'SVG содержит circle-элементы, когда персонажи добавлены',
+    await t('Узлы графа отрисованы', 'SVG содержит circle-элементы',
       async () => {
-        // Ждём до 12с — если персонажей нет, circles может быть 0 (ок для шаблона)
-        await driver.sleep(2000);
+        await driver.wait(async () => (await driver.findElements(By.css('#graph-svg circle'))).length > 0, 12000, 'No circles');
         const nodes = await driver.findElements(By.css('#graph-svg circle'));
-        // 0 nodes is acceptable in empty template — just check SVG rendered
-        const svg = await driver.findElement(By.id('graph-svg'));
-        assert(await svg.isDisplayed(), 'SVG не виден');
+        if (!nodes.length) throw new Error('No circle nodes');
       });
 
-    // ── Группа 6: Инструменты ─────────────────────────────────────────────────
+    // ── Группа 14: Инструменты ────────────────────────────────────────────────
     group('⚙️ Инструменты', 'Вкладки форм: домен, НПС, проверка ссылок');
 
     await t('Вкладка "Новый домен" активна', 'Переход + #tab-new-city.active',
@@ -1120,42 +1421,23 @@ async function main() {
         if (!(await btn.isDisplayed())) throw new Error('#btn-validate not visible');
       });
 
-    // ── Пред-очистка ──────────────────────────────────────────────────────────
-    clearLine();
-    process.stdout.write('\n  \x1b[2m⟳  Пред-очистка тестовых персонажей...\x1b[0m\n');
-    var preRemoved = cleanupTestChars();
-    process.stdout.write('  \x1b[2m✓  Удалено ' + preRemoved + ' остаточных папок\x1b[0m\n');
+    // ── Группа 15: Детальный просмотр персонажа ───────────────────────────────
+    group('👁 Детальный просмотр', 'Открытие карточки персонажа, содержимое, закрытие');
 
-    // ── Группа 7: Создание персонажей ─────────────────────────────────────────
-    group('🧪 Создание персонажей', 'Все 6 типов: форма + изображение + API + файловая система');
-
-    for (var ci = 0; ci < TEST_CHARS.length; ci++) {
-      await (function(ch) {
-        var label = ch.type.charAt(0).toUpperCase() + ch.type.slice(1);
-        return t('Создать: ' + label + ' (' + ch.name + ')',
-          'Модал → заполнить поля → загрузить test.png → успешный ответ',
-          async () => { await createCharViaUI(driver, ch.type, ch.fields, TEST_IMG); });
-      })(TEST_CHARS[ci]);
-    }
-
-    // ── Группа 8: Детальный просмотр (после создания тестовых персонажей) ────
-    group('👁 Детальный просмотр', 'Открытие карточки тестового персонажа, содержимое, закрытие');
-
-    await t('Клик карточки тест-персонажа открывает модал',
-      'Переход + сброс фильтров + .char-card[тест] → #char-detail-modal',
+    await t('Клик карточки открывает модал', 'Переход + сброс фильтров + .char-card → #char-detail-modal',
       async () => {
         await navTo(driver, 'characters');
         await waitForNoSpinner(driver, 'chars-grid', 10000);
         await driver.executeScript(
           'var s=document.getElementById("search-input");' +
-          'if(s){s.value="Тест-Авто";s.dispatchEvent(new Event("input",{bubbles:true}));}' +
+          'if(s){s.value="";s.dispatchEvent(new Event("input",{bubbles:true}));}' +
           'var l=document.getElementById("filter-lineage");' +
           'if(l){l.value="all";l.dispatchEvent(new Event("change",{bubbles:true}));}'
         );
-        await driver.sleep(500);
-        await driver.wait(until.elementLocated(By.css('.char-card')), WAIT, 'No test char-cards');
+        await driver.sleep(400);
+        await driver.wait(until.elementLocated(By.css('.char-card')), WAIT, 'No char-cards after reset');
         const cards = await driver.findElements(By.css('.char-card'));
-        if (!cards.length) throw new Error('No char-cards after filter "Тест-Авто"');
+        if (!cards.length) throw new Error('No char-cards');
         await cards[0].click();
         await waitModalVisible(driver, 'char-detail-modal');
       });
@@ -1173,7 +1455,27 @@ async function main() {
         await waitModalHidden(driver, 'char-detail-modal');
       });
 
-    // ── Группа 9: Верификация созданных персонажей ────────────────────────────
+    // ── Пред-очистка: удаляем остатки предыдущих прогонов ────────────────────
+    clearLine();
+    process.stdout.write('\n  \x1b[2m⟳  Пред-очистка тестовых персонажей...\x1b[0m\n');
+    var preRemoved = cleanupTestChars();
+    process.stdout.write('  \x1b[2m✓  Удалено ' + preRemoved + ' остаточных папок\x1b[0m\n');
+
+    // ── Группа 16: Создание персонажей ───────────────────────────────────────
+    group('🧪 Создание персонажей', 'Все 6 типов: форма + изображение + API + файловая система');
+
+    for (var ci = 0; ci < TEST_CHARS.length; ci++) {
+      await (function(ch) {
+        var label = ch.type.charAt(0).toUpperCase() + ch.type.slice(1);
+        return t('Создать: ' + label + ' (' + ch.name + ')',
+          'Модал → заполнить поля → загрузить test.png → успешный ответ',
+          async () => {
+            await createCharViaUI(driver, ch.type, ch.fields, TEST_IMG);
+          });
+      })(TEST_CHARS[ci]);
+    }
+
+    // ── Группа 17: Верификация файлов ─────────────────────────────────────────
     group('🔍 Верификация созданных персонажей', 'Файловая система: папка, карточка, портрет');
 
     for (var vi = 0; vi < TEST_CHARS.length; vi++) {
@@ -1193,6 +1495,7 @@ async function main() {
             }
             assert(portrait !== null, 'Портрет не загружен в ' + dir);
 
+            // Проверяем что карточка содержит корректный тип
             var md = fs.readFileSync(card, 'utf-8');
             var expectedWoD = {
               vampire: 'Вампир', mortal: 'Смертный', fairy: 'Фея',
@@ -1200,6 +1503,7 @@ async function main() {
             }[ch.type];
             assertInc(md, '**Линейка WoD:** ' + expectedWoD, 'Линейка WoD');
 
+            // Проверяем запись в characters_ALL.md только если соответствующая секция существует
             var allMd = fs.readFileSync(path.join(ROOT, 'characters', 'characters_ALL.md'), 'utf-8');
             var sectionMarkers = {
               vampire: '## 🧚 Феи', fairy: '## 🧑 Смертные', mortal: '## 📂 Пустые',
@@ -1213,7 +1517,7 @@ async function main() {
       })(TEST_CHARS[vi]);
     }
 
-    // ── Пост-очистка ──────────────────────────────────────────────────────────
+    // ── Пост-очистка: удаляем тестовых персонажей ────────────────────────────
     clearLine();
     process.stdout.write('\n  \x1b[33m⟳  Очистка тестовых персонажей...\x1b[0m\n');
     try {
@@ -1229,8 +1533,10 @@ async function main() {
 
   if (serverProc) serverProc.kill();
 
+  // Закрываем последнюю группу
   if (_group && _group.tests.length) { clearLine(); printGroupFooter(_group); }
 
+  // ── Финальный итог ────────────────────────────────────────────────────────
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
   const total   = _pass + _fail;
   const pct     = total ? Math.round(_pass / total * 100) : 0;
