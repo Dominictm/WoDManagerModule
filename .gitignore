@@ -7,3 +7,6 @@ web/node_modules/
 .claude/settings.local.json
 Thumbs.db
 desktop.ini
+
+node_modules/
+tests/node_modules/

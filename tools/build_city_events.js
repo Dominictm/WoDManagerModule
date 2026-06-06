@@ -2,10 +2,11 @@
 'use strict';
 // Агрегатор: пересобирает индекс «Сводная хроника событий» в cities/<city>/archive/events.md
 // из chronicles/<хроника>/events.md. Хроники берутся С ДИСКА (а не только из _chronicle_map.json),
-// поэтому работают и динамически созданные через log-session. Город — аргумент (по умолчанию paris).
-// Запуск:  node tools/build_city_events.js [city]
+// поэтому работают и динамически созданные через log-session. Город — обязательный аргумент.
+// Запуск:  node tools/build_city_events.js <city>
 const fs = require('fs'), path = require('path'), ROOT = path.resolve(__dirname, '..');
-const city = process.argv[2] || 'paris';
+const city = process.argv[2];
+if (!city) { console.error('Использование: node tools/build_city_events.js <city>'); process.exit(1); }
 let chronMap = {};
 try { chronMap = (JSON.parse(fs.readFileSync(path.join(ROOT, 'tools', '_chronicle_map.json'), 'utf8'))[city]) || {}; } catch {}
 

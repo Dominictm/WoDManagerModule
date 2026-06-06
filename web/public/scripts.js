@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════
 // City (multi-city) — transparent ?city= on every /api/ call
 // ═══════════════════════════════════════════════════════════════
-let CITY = new URLSearchParams(location.search).get('city') || 'paris';
+let CITY = new URLSearchParams(location.search).get('city') || '';
 (function () {
   const _fetch = window.fetch.bind(window);
   window.fetch = (url, opts) => {
@@ -16,7 +16,7 @@ async function initCitySwitch() {
   if (!sel) return;
   try {
     const { cities = [], default: def } = await fetch('/api/cities').then(r => r.json());
-    const list = cities.length ? cities : [def || 'paris'];
+    const list = cities.length ? cities : (def ? [def] : []);
     // If the active city isn't available (e.g. fresh template), redirect to the first one.
     const urlCity = new URLSearchParams(location.search).get('city');
     if (!urlCity && cities.length && !cities.includes(CITY)) {
