@@ -84,7 +84,7 @@ function parseCharacter(rawContent, folderName, lineage) {
     if (k === 'Внешность')                      c.appearance    = v;
     if (k === 'Дитя')                           c.childe        = v;
     if (k === 'Домен / Локация')                c.location      = v;
-    if (k === 'Иерархия в городе')             c.hierarchy     = v;
+    if (/иерархи/i.test(k))                     c.hierarchy     = v;   // «Иерархия в городе» / устар. варианты
     if (k === 'Деранжементы / Особенности')     c.derangements  = v;
     if (k === 'Дисциплины')                     c.disciplines   = v;
     if (k === 'Профессия')                      c.profession    = v;
@@ -202,7 +202,7 @@ async function countMdFiles(dir) {
   try {
     for (const item of await fs.readdir(dir, { withFileTypes: true })) {
       if (item.isDirectory()) n += await countMdFiles(path.join(dir, item.name));
-      else if (item.name.endsWith('.md') && item.name !== 'cities/<город>/archive/characters_index.md') n++;
+      else if (item.name.endsWith('.md') && item.name !== 'characters_index.md') n++;
     }
   } catch {}
   return n;
@@ -957,6 +957,26 @@ const SWITCH_PARAMS = ['Fix'];
 // Tools that write project files → trigger background revalidation on success.
 const FILE_MUTATING_TOOLS = new Set(['new_npc', 'new_module', 'new_city']);
 
+// ── Run a Node CLI tool (cities/-aware) ────────────────────────────────────────
+// Args are passed as an array to spawn() WITHOUT a shell → no injection risk.
+const NODE_TOOLS = new Set(['new_city', 'new_npc', 'migrate_char', 'close_chronicle', 'build_city_events']);
+app.post('/api/tool/:name', async (req, res) => {
+  const name = req.params.name;
+  if (!NODE_TOOLS.has(name)) return res.status(400).json({ ok: false, output: 'Unknown tool' });
+  const args = (Array.isArray(req.body.args) ? req.body.args : []).map(a => String(a)).filter(a => a.length);
+  const ps = spawn('node', [path.join(ROOT, 'tools', `${name}.js`), ...args], { cwd: ROOT });
+  let out = '', err = '';
+  const timer = setTimeout(() => ps.kill(), 30000);
+  ps.stdout.on('data', d => out += d.toString('utf8'));
+  ps.stderr.on('data', d => err += d.toString('utf8'));
+  ps.on('error', e => { clearTimeout(timer); res.json({ ok: false, output: e.message }); });
+  ps.on('close', code => {
+    clearTimeout(timer);
+    if (code === 0) { _cache = {}; runValidationBackground(); }
+    res.json({ ok: code === 0, output: (out + err).trim(), exitCode: code });
+  });
+});
+
 app.post('/api/run-tool', async (req, res) => {
   const { tool, params = {} } = req.body;
   const allowed = ['new_city','new_npc','new_module','validate_links','status','search'];
@@ -1391,6 +1411,13 @@ async function buildSessionPlan(payload) {
   add(chrEventsRel, chrEventsExisted ? 'modify' : 'create', appendChronicleEntry(chronicleRaw, entry),
     `${chrEventsExisted ? 'append' : 'new'} запись: ### 📅 ${p.event.dateLabel} — ${p.event.title}`);
 
+  // 1a. New chronicle → seed chronicle.md (спина + статус «Активна»)
+  if (chronicleNew) {
+    add(`cities/${city}/chronicles/${chr}/chronicle.md`, 'create',
+      `# 📕 ${chrDisplay || chr}\n\n- **Статус:** 🟡 Активна\n\n> Спина хроники. События — [events.md](events.md). Нити — [open_threads.md](open_threads.md).\n> Закрыть хронику: \`node tools/close_chronicle.js ${city} ${chr} "финал"\`\n`,
+      'новая хроника: chronicle.md (статус Активна)');
+  }
+
   // 1b. World-state stamp in archive/events.md
   const monthLabel = p.event.dateLabel.split(',')[0];
   const archiveRel = `cities/${city}/archive/events.md`;
@@ -1399,7 +1426,8 @@ async function buildSessionPlan(payload) {
   if (archiveRaw && /Последнее обновление:/.test(archiveRaw))
     add(archiveRel, 'modify', bumpWorldStateStamp(archiveRaw, monthLabel), `штамп «Состояние мира» → ${monthLabel}`);
   if ((p.event.worldChanges || []).length)
-    notes.push(`Сводные таблицы «🌍 Состояние мира» не правятся автоматически — проверьте вручную (${p.event.worldChanges.length} изменений).`);
+    notes.push('Отрази вручную в сводных таблицах «🌍 Состояние мира» (правятся не автоматически):\n' +
+      p.event.worldChanges.map(c => `   • ${c}`).join('\n'));
   notes.push('Индекс «Сводная хроника» (archive/events.md) перегенерируется после записи.');
 
   // 2. Module files
